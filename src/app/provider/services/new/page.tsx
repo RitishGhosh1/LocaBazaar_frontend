@@ -25,14 +25,15 @@ const serviceSchema = z.object({
   price: z.coerce.number().int().positive("Price must be a positive whole number"),
 });
 
-type ServiceFormValues = z.infer<typeof serviceSchema>;
+type ServiceFormInput = z.input<typeof serviceSchema>;
+type ServiceFormOutput = z.output<typeof serviceSchema>;
 
 export default function NewProviderServicePage() {
   const router = useRouter();
   const categoriesQuery = useCategories();
   const createMutation = useCreateService();
 
-  const form = useForm<ServiceFormValues>({
+  const form = useForm<ServiceFormInput, unknown, ServiceFormOutput>({
     resolver: zodResolver(serviceSchema),
     defaultValues: {
       name: "",
@@ -42,7 +43,7 @@ export default function NewProviderServicePage() {
     },
   });
 
-  async function onSubmit(values: ServiceFormValues) {
+  async function onSubmit(values: ServiceFormOutput) {
     try {
       await createMutation.mutateAsync({
         name: values.name,
@@ -141,3 +142,4 @@ export default function NewProviderServicePage() {
     </div>
   );
 }
+

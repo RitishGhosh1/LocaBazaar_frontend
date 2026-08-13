@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { getProviders } from "@/services/providers";
+import { becomeProvider, getProviders } from "@/services/providers";
 
 export const providerQueryKeys = {
   all: ["providers"] as const,
@@ -13,3 +13,15 @@ export function useProviders() {
     queryFn: getProviders,
   });
 }
+
+export function useBecomeProvider() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: becomeProvider,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: providerQueryKeys.all });
+    },
+  });
+}
+

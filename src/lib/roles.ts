@@ -1,57 +1,63 @@
 /**
  * Centralized role resolution for dashboard route protection.
- *
- * Primary source: JWT claims decoded client-side (see jwt.ts limitation).
- * Fallback: authenticated users without role claims are treated as customers.
+ * Rule:
+ * 1. is_superuser === true -> /admin/dashboard (SUPERUSER WINS)
+ * 2. role === "provider" -> /provider/dashboard
+ * 3. otherwise -> /dashboard
  */
 
-import { decodeAccessToken, type DecodedAccessToken, type UserRole } from "@/lib/jwt";
+import { decodeAccessToken } from "@/lib/jwt";
+import type { AuthUser } from "@/services/auth";
 
 export type AppRole = "customer" | "provider" | "superadmin";
 
 export interface ResolvedRole {
   appRole: AppRole;
-  jwtRole: UserRole | null;
+  jwtRole: string | null;
   isSuperuser: boolean;
   subject: string | null;
-  source: "jwt" | "fallback";
+  source: "user" | "jwt" | "fallback";
 }
 
-export function resolveRoleFromToken(accessToken: string | null): ResolvedRole | null {
+export function resolveRoleFromUserOrToken(
+  user: AuthUser | null | undefined,
+  accessToken: string | null,
+): ResolvedRole | null {
   const decoded = decodeAccessToken(accessToken);
-  if (!decoded) return null;
+  if (!user && !decoded) return null;
 
-  return resolveRoleFromDecoded(decoded);
-}
-
-export function resolveRoleFromDecoded(decoded: DecodedAccessToken): ResolvedRole {
-  if (decoded.isSuperuser) {
+  // SUPERUSER WINS
+  if (user?.is_superuser || decoded?.isSuperuser) {
     return {
       appRole: "superadmin",
-      jwtRole: decoded.role,
+      jwtRole: user?.role ?? decoded?.role ?? null,
       isSuperuser: true,
-      subject: decoded.sub,
-      source: decoded.role || decoded.isSuperuser ? "jwt" : "fallback",
+      subject: user?.email ?? decoded?.sub ?? null,
+      source: user ? "user" : "jwt",
     };
   }
 
-  if (decoded.role === "provider") {
+  if (user?.role === "provider" || decoded?.role === "provider") {
     return {
       appRole: "provider",
       jwtRole: "provider",
       isSuperuser: false,
-      subject: decoded.sub,
-      source: "jwt",
+      subject: user?.email ?? decoded?.sub ?? null,
+      source: user ? "user" : "jwt",
     };
   }
 
   return {
     appRole: "customer",
-    jwtRole: decoded.role ?? "customer",
+    jwtRole: user?.role ?? decoded?.role ?? "customer",
     isSuperuser: false,
-    subject: decoded.sub,
-    source: decoded.role ? "jwt" : "fallback",
+    subject: user?.email ?? decoded?.sub ?? null,
+    source: user ? "user" : decoded?.role ? "jwt" : "fallback",
   };
+}
+
+export function resolveRoleFromToken(accessToken: string | null): ResolvedRole | null {
+  return resolveRoleFromUserOrToken(null, accessToken);
 }
 
 export function canAccessRoute(appRole: AppRole, required: AppRole): boolean {
@@ -70,3 +76,4 @@ export function getDefaultDashboardPath(appRole: AppRole): string {
       return "/dashboard";
   }
 }
+

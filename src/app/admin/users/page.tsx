@@ -1,105 +1,155 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { UserCog } from "lucide-react";
-import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 
-import { PageHeader } from "@/components/dashboard/dashboard-primitives";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingScreen,
+  PageHeader,
+} from "@/components/dashboard/dashboard-primitives";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useDeactivateUser, useDeleteUser } from "@/hooks/use-admin";
+import { useAdminUsers, useDeactivateUser, useDeleteUser } from "@/hooks/use-admin";
 import { getApiErrorMessage } from "@/lib/api-error";
-
-const userIdSchema = z.object({
-  userId: z.coerce.number().int().positive("Enter a valid user ID"),
-});
-
-type UserIdFormValues = z.infer<typeof userIdSchema>;
+import { useAuthStore } from "@/store/auth-store";
 
 export default function AdminUsersPage() {
+  const currentUser = useAuthStore((state) => state.user);
+  const usersQuery = useAdminUsers();
   const deactivateMutation = useDeactivateUser();
   const deleteMutation = useDeleteUser();
 
-  const form = useForm<UserIdFormValues>({
-    resolver: zodResolver(userIdSchema),
-    defaultValues: { userId: 0 },
-  });
+  const users = usersQuery.data ?? [];
 
-  async function handleDeactivate(values: UserIdFormValues) {
+  async function handleDeactivate(userId: number, name: string) {
+    if (!window.confirm(`Deactivate account for "${name}" (ID #${userId})?`)) {
+      return;
+    }
+
     try {
-      await deactivateMutation.mutateAsync(values.userId);
-      toast.success(`User #${values.userId} deactivated`);
+      await deactivateMutation.mutateAsync(userId);
+      toast.success(`User "${name}" deactivated`);
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to deactivate user"));
     }
   }
 
-  async function handleDelete(values: UserIdFormValues) {
-    if (!window.confirm(`Permanently delete user #${values.userId}? This cannot be undone.`)) {
+  async function handleDelete(userId: number, name: string) {
+    if (
+      !window.confirm(
+        `PERMANENTLY DELETE user "${name}" (ID #${userId})? This will erase all user records and cannot be undone.`,
+      )
+    ) {
       return;
     }
 
     try {
-      await deleteMutation.mutateAsync(values.userId);
-      toast.success(`User #${values.userId} deleted`);
+      await deleteMutation.mutateAsync(userId);
+      toast.success(`User "${name}" permanently deleted`);
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to delete user"));
     }
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
+    <div className="space-y-8">
       <PageHeader
         title="User management"
-        description="Admin actions by user ID. A list-users endpoint is not available in the current API."
+        description="All registered platform accounts. Review users, suspend active accounts, or permanently delete deactivated accounts."
       />
 
-      <div className="flex gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
-        <UserCog className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden="true" />
-        <p className="text-muted-foreground">
-          Available endpoints:{" "}
-          <code className="text-xs">PATCH /admin/users/{"{id}"}/deactivate</code> and{" "}
-          <code className="text-xs">DELETE /admin/users/{"{id}"}</code>. No user listing or search exists.
-        </p>
-      </div>
+      {usersQuery.isLoading ? (
+        <LoadingScreen message="Loading platform users…" />
+      ) : usersQuery.isError ? (
+        <ErrorState
+          title="Unable to load users"
+          description="Superuser authorization is required to list platform users."
+          onRetry={() => usersQuery.refetch()}
+        />
+      ) : users.length === 0 ? (
+        <EmptyState
+          icon={UserCog}
+          title="No users found"
+          description="Registered user accounts will appear here."
+        />
+      ) : (
+        <div className="overflow-hidden rounded-lg border">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[840px] text-left text-sm">
+              <thead className="border-b bg-muted/40">
+                <tr>
+                  <th className="px-4 py-3 font-medium">ID</th>
+                  <th className="px-4 py-3 font-medium">User</th>
+                  <th className="px-4 py-3 font-medium">Email</th>
+                  <th className="px-4 py-3 font-medium">Role</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => {
+                  const isSelf = currentUser?.id === user.id;
+                  const isSuperuser = (user as { is_superuser?: boolean }).is_superuser === true;
 
-      <form className="space-y-6 rounded-lg border bg-card p-6 shadow-sm">
-        <div className="space-y-2">
-          <Label htmlFor="userId">User ID</Label>
-          <Input
-            id="userId"
-            type="number"
-            min={1}
-            {...form.register("userId")}
-            aria-invalid={Boolean(form.formState.errors.userId)}
-          />
-          {form.formState.errors.userId && (
-            <p className="text-sm text-destructive">{form.formState.errors.userId.message}</p>
-          )}
+                  return (
+                    <tr key={user.id} className="border-b last:border-b-0">
+                      <td className="px-4 py-3 text-muted-foreground font-mono text-xs">#{user.id}</td>
+                      <td className="px-4 py-3 font-medium">
+                        <div className="flex items-center gap-2">
+                          <span>{user.name}</span>
+                          {isSuperuser && (
+                            <Badge variant="default" className="text-[10px] uppercase">
+                              Admin
+                            </Badge>
+                          )}
+                          {isSelf && (
+                            <span className="text-xs text-muted-foreground font-normal">(You)</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
+                      <td className="px-4 py-3 capitalize">{user.role}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant={user.is_active ? "success" : "muted"}>
+                          {user.is_active ? "Active" : "Suspended"}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            type="button"
+                            disabled={
+                              deactivateMutation.isPending || !user.is_active || isSuperuser || isSelf
+                            }
+                            onClick={() => handleDeactivate(user.id, user.name)}
+                          >
+                            Deactivate
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            type="button"
+                            disabled={
+                              deleteMutation.isPending || user.is_active || isSuperuser || isSelf
+                            }
+                            onClick={() => handleDelete(user.id, user.name)}
+                          >
+                            Hard delete
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-
-        <div className="flex flex-wrap gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={deactivateMutation.isPending}
-            onClick={form.handleSubmit(handleDeactivate)}
-          >
-            {deactivateMutation.isPending ? "Deactivating…" : "Deactivate user"}
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            disabled={deleteMutation.isPending}
-            onClick={form.handleSubmit(handleDelete)}
-          >
-            {deleteMutation.isPending ? "Deleting…" : "Hard delete user"}
-          </Button>
-        </div>
-      </form>
+      )}
     </div>
   );
 }

@@ -1,24 +1,21 @@
 /**
- * Client-side JWT payload decoding for UI routing only.
- *
- * LIMITATION: There is no `/me` or session-validation endpoint. Role information
- * is inferred from unverified JWT claims until a profile endpoint exists.
- * Do not use these values for security-sensitive decisions on the server.
+ * Client-side JWT payload decoding for UI routing and non-sensitive claims recovery.
  */
-
-import type { components } from "@/types/api";
-
-export type UserRole = components["schemas"]["UserRole"];
 
 export interface DecodedAccessToken {
   sub: string | null;
-  role: UserRole | null;
+  name: string | null;
+  id: number | null;
+  role: string | null;
   isSuperuser: boolean;
   expiresAt: number | null;
 }
 
 interface JwtPayload {
   sub?: string;
+  name?: string;
+  id?: number;
+  user_id?: number;
   role?: string;
   is_superuser?: boolean;
   exp?: number;
@@ -28,10 +25,6 @@ function decodeBase64Url(value: string): string {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
   return atob(padded);
-}
-
-function isUserRole(value: string | undefined): value is UserRole {
-  return value === "customer" || value === "provider";
 }
 
 export function decodeAccessToken(token: string | null | undefined): DecodedAccessToken | null {
@@ -45,7 +38,9 @@ export function decodeAccessToken(token: string | null | undefined): DecodedAcce
 
     return {
       sub: payload.sub ?? null,
-      role: isUserRole(payload.role) ? payload.role : null,
+      name: payload.name ?? (payload.sub ? payload.sub.split("@")[0] : null),
+      id: typeof payload.id === "number" ? payload.id : (typeof payload.user_id === "number" ? payload.user_id : null),
+      role: typeof payload.role === "string" ? payload.role : null,
       isSuperuser: payload.is_superuser === true,
       expiresAt: typeof payload.exp === "number" ? payload.exp : null,
     };
@@ -58,3 +53,4 @@ export function isTokenExpired(decoded: DecodedAccessToken | null): boolean {
   if (!decoded?.expiresAt) return false;
   return decoded.expiresAt * 1000 <= Date.now();
 }
+

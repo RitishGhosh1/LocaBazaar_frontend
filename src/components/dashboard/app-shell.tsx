@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Star,
   Tags,
   User,
   UserCog,
@@ -32,6 +33,7 @@ const iconMap = {
   Users,
   Tags,
   UserCog,
+  Star,
 } as const;
 
 export interface ShellNavItem {

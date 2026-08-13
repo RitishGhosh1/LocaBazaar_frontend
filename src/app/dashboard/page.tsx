@@ -18,7 +18,7 @@ import { countBookingsByStatus } from "@/lib/format";
 import { useAuthStore } from "@/store/auth-store";
 
 export default function CustomerDashboardPage() {
-  const { resolvedRole } = useAuthStore();
+  const { resolvedRole, user } = useAuthStore();
   const bookingsQuery = useBookings({ limit: 50 });
   const bookings = bookingsQuery.data?.items ?? [];
   const counts = countBookingsByStatus(bookings);
@@ -26,9 +26,9 @@ export default function CustomerDashboardPage() {
   const upcoming = bookings.filter((b) => b.status === "pending" || b.status === "confirmed");
   const completed = bookings.filter((b) => b.status === "completed");
 
-  const greeting = resolvedRole?.subject?.includes("@")
+  const greeting = user?.name || (resolvedRole?.subject?.includes("@")
     ? resolvedRole.subject.split("@")[0]
-    : "there";
+    : "Customer");
 
   return (
     <div className="space-y-8">

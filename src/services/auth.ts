@@ -12,9 +12,18 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface AuthUser {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  is_superuser: boolean;
+}
+
 export interface AuthSession {
   access_token: string;
   token_type: string;
+  user?: AuthUser;
 }
 
 export class AuthApiError<TData = ApiErrorResponse> extends Error {
@@ -62,3 +71,4 @@ export async function login(credentials: LoginRequest): Promise<AuthSession> {
     throw toAuthApiError(error);
   }
 }
+

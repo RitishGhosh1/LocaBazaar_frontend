@@ -23,8 +23,10 @@ export const providerNavItems = [
 
 export const adminNavItems = [
   { href: "/admin/dashboard", label: "Overview", iconName: "LayoutDashboard" as const, exact: true },
-  { href: "/admin/providers", label: "Providers", iconName: "Users" as const },
-  { href: "/admin/categories", label: "Categories", iconName: "Tags" as const },
-  { href: "/admin/services", label: "Services", iconName: "Briefcase" as const },
   { href: "/admin/users", label: "Users", iconName: "UserCog" as const },
+  { href: "/admin/providers", label: "Providers", iconName: "Users" as const },
+  { href: "/admin/services", label: "Services", iconName: "Briefcase" as const },
+  { href: "/admin/bookings", label: "Bookings", iconName: "CalendarDays" as const },
+  { href: "/admin/reviews", label: "Reviews", iconName: "Star" as const },
+  { href: "/admin/categories", label: "Categories", iconName: "Tags" as const },
 ] as const;

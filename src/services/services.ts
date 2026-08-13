@@ -1,6 +1,7 @@
 import type { components, operations } from "@/types/api";
 
 import api from "@/services/api";
+import { useAuthStore } from "@/store/auth-store";
 
 export type ServiceListParams = NonNullable<
   operations["get_available_services_api_v1_services__get"]["parameters"]["query"]
@@ -27,8 +28,17 @@ export async function getServiceCategories(): Promise<ServiceCategory[]> {
 }
 
 export async function getMyServices(): Promise<ServiceDetails[]> {
-  const { data } = await api.get<ServiceDetails[]>("/services/mine");
-  return data;
+  try {
+    const { data } = await api.get<ServiceDetails[]>("/services/mine");
+    return data;
+  } catch {
+    const user = useAuthStore.getState().user;
+    if (user?.id) {
+      const { data } = await api.get<ServiceDetails[]>(`/providers/${user.id}`);
+      return data;
+    }
+    return [];
+  }
 }
 
 export async function createService(payload: ServiceCreate): Promise<ServiceShort> {
