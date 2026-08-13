@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { getDefaultDashboardPath } from "@/lib/roles";
 import { useAuthStore } from "@/store/auth-store";
 
 const navLinks = [
@@ -18,7 +19,7 @@ const navLinks = [
 export function Navbar() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { initialize, isAuthenticated, isInitializing, logout } = useAuthStore();
+  const { initialize, isAuthenticated, isInitializing, logout, resolvedRole } = useAuthStore();
 
   useEffect(() => {
     void initialize();
@@ -35,7 +36,10 @@ export function Navbar() {
   }
 
   const accountLinks = isAuthenticated
-    ? [{ href: "/dashboard", label: "Dashboard" }]
+    ? [{
+        href: resolvedRole ? getDefaultDashboardPath(resolvedRole.appRole) : "/dashboard",
+        label: "Dashboard",
+      }]
     : [
         { href: "/login", label: "Login" },
         { href: "/login", label: "Get Started" },

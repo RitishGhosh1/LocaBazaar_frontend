@@ -11,6 +11,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { API_BASE_URL } from "@/services/api";
 import { AuthApiError } from "@/services/auth";
+import { getDefaultDashboardPath } from "@/lib/roles";
 import { useAuthStore } from "@/store/auth-store";
 
 const loginSchema = z.object({
@@ -44,7 +45,8 @@ export default function LoginPage() {
     try {
       await login(email, password);
       toast.success("Signed in successfully.");
-      router.replace("/dashboard");
+      const role = useAuthStore.getState().resolvedRole;
+      router.replace(role ? getDefaultDashboardPath(role.appRole) : "/dashboard");
     } catch (error) {
       toast.error(getLoginErrorMessage(error));
     }

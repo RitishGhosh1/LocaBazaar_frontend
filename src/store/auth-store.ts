@@ -2,6 +2,8 @@
 
 import { create } from "zustand";
 
+import { decodeAccessToken, isTokenExpired, type DecodedAccessToken } from "@/lib/jwt";
+import { resolveRoleFromDecoded, type ResolvedRole } from "@/lib/roles";
 import {
   login as loginRequest,
 } from "@/services/auth";
@@ -9,7 +11,8 @@ import { ACCESS_TOKEN_STORAGE_KEY } from "@/services/api";
 
 export interface AuthState {
   accessToken: string | null;
-  user: null;
+  decodedToken: DecodedAccessToken | null;
+  resolvedRole: ResolvedRole | null;
   isAuthenticated: boolean;
   isInitializing: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -26,26 +29,72 @@ function clearPersistedSession(): void {
   window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
 }
 
-function clearSession(set: (state: Pick<AuthState, "accessToken" | "user" | "isAuthenticated">) => void): void {
+function buildSessionState(accessToken: string | null): Pick<
+  AuthState,
+  "accessToken" | "decodedToken" | "resolvedRole" | "isAuthenticated"
+> {
+  if (!accessToken) {
+    return {
+      accessToken: null,
+      decodedToken: null,
+      resolvedRole: null,
+      isAuthenticated: false,
+    };
+  }
+
+  const decodedToken = decodeAccessToken(accessToken);
+  const isExpired = isTokenExpired(decodedToken);
+
+  if (isExpired) {
+    return {
+      accessToken: null,
+      decodedToken: null,
+      resolvedRole: null,
+      isAuthenticated: false,
+    };
+  }
+
+  return {
+    accessToken,
+    decodedToken,
+    resolvedRole: decodedToken ? resolveRoleFromDecoded(decodedToken) : null,
+    isAuthenticated: true,
+  };
+}
+
+function clearSession(
+  set: (
+    state: Pick<
+      AuthState,
+      "accessToken" | "decodedToken" | "resolvedRole" | "isAuthenticated"
+    >,
+  ) => void,
+): void {
   clearPersistedSession();
-  set({ accessToken: null, user: null, isAuthenticated: false });
+  set({
+    accessToken: null,
+    decodedToken: null,
+    resolvedRole: null,
+    isAuthenticated: false,
+  });
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
-  user: null,
+  decodedToken: null,
+  resolvedRole: null,
   isAuthenticated: false,
   isInitializing: true,
 
   login: async (email, password) => {
     const session = await loginRequest({ email, password });
     persistSession(session.access_token);
-    set({ accessToken: session.access_token, user: null, isAuthenticated: true, isInitializing: false });
+    set({ ...buildSessionState(session.access_token), isInitializing: false });
   },
 
   setSession: (accessToken) => {
     persistSession(accessToken);
-    set({ accessToken, user: null, isAuthenticated: true, isInitializing: false });
+    set({ ...buildSessionState(accessToken), isInitializing: false });
   },
 
   logout: () => {
@@ -57,11 +106,21 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     const accessToken = window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
     if (!accessToken) {
-      set({ accessToken: null, user: null, isAuthenticated: false, isInitializing: false });
+      set({
+        accessToken: null,
+        decodedToken: null,
+        resolvedRole: null,
+        isAuthenticated: false,
+        isInitializing: false,
+      });
       return;
     }
 
-    // The API has no session-validation endpoint; restore the persisted JWT locally.
-    set({ accessToken, user: null, isAuthenticated: true, isInitializing: false });
+    const sessionState = buildSessionState(accessToken);
+    if (!sessionState.isAuthenticated) {
+      clearPersistedSession();
+    }
+
+    set({ ...sessionState, isInitializing: false });
   },
 }));

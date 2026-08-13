@@ -4,6 +4,7 @@ import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { getDefaultDashboardPath, resolveRoleFromToken } from "@/lib/roles";
 import { useAuthStore } from "@/store/auth-store";
 
 export default function AuthCallbackPage() {
@@ -29,7 +30,9 @@ export default function AuthCallbackPage() {
 
     setSession(accessToken);
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
-    router.replace("/dashboard");
+
+    const role = resolveRoleFromToken(accessToken);
+    router.replace(role ? getDefaultDashboardPath(role.appRole) : "/dashboard");
   }, [router, setSession]);
 
   return (
