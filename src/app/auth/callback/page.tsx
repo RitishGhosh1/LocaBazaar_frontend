@@ -13,7 +13,15 @@ export default function AuthCallbackPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
     const fragment = new URLSearchParams(window.location.hash.slice(1));
+    const errorParam = searchParams.get("error") || fragment.get("error");
+
+    if (errorParam === "account_inactive" || errorParam === "inactive") {
+      router.replace("/login?error=account_inactive");
+      return;
+    }
+
     const accessToken = fragment.get("access_token");
     const tokenType = fragment.get("token_type");
 

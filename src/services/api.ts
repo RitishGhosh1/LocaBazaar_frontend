@@ -50,7 +50,23 @@ const api: AxiosInstance = axios.create({
 api.interceptors.request.use(attachRequestDefaults);
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<ApiErrorResponse>) => Promise.reject(error),
+  (error: AxiosError<ApiErrorResponse>) => {
+    const detail = error.response?.data?.detail;
+    const isInactiveError =
+      error.response?.status === 403 &&
+      typeof detail === "string" &&
+      detail.toLowerCase().includes("inactive");
+
+    if (isInactiveError && typeof window !== "undefined") {
+      window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+      window.localStorage.removeItem("auth_user");
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login?error=account_inactive";
+      }
+    }
+
+    return Promise.reject(error);
+  },
 );
 
 export default api;
