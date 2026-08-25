@@ -71,7 +71,7 @@ export default function ExplorePage() {
   const { data: categories = [], isLoading: areCategoriesLoading } = useServiceCategories();
   const providersQuery = useProviders();
   const params = useMemo(
-    () => ({ q: query || undefined, category_id: categoryId, skip, limit: PAGE_SIZE }),
+    () => ({ q: query || undefined, category_id: categoryId ?? undefined, skip, limit: PAGE_SIZE }),
     [categoryId, query, skip],
   );
   const servicesQuery = useServices(params);

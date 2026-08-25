@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -117,18 +117,11 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const login = useAuthStore((state) => state.login);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [feedback, setFeedback] = useState<FormFeedback | null>(null);
-
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
-  });
-
-  // Check URL query parameters on initial mount (e.g. redirected from Google OAuth or session expiry)
-  useEffect(() => {
-    const errorParam = searchParams.get("error");
-    if (errorParam === "account_inactive" || errorParam === "inactive") {
-      setFeedback({
+  const errorParam = searchParams.get("error");
+  const isInactiveError = errorParam === "account_inactive" || errorParam === "inactive";
+  const [feedback, setFeedback] = useState<FormFeedback | null>(() => {
+    if (isInactiveError) {
+      return {
         type: "inactive",
         title: "Account Deactivated",
         message:
@@ -137,9 +130,15 @@ function LoginForm() {
           label: "Contact Support",
           href: "mailto:support@locabazaar.com?subject=LocaBazaar%20Account%20Reactivation%20Request",
         },
-      });
+      };
     }
-  }, [searchParams]);
+    return null;
+  });
+
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
 
   async function onSubmit({ email, password }: LoginFormValues) {
     setFeedback(null);
