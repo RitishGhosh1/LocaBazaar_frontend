@@ -16,3 +16,8 @@ export async function createCustomer(payload: CustomerCreate): Promise<CustomerR
   const { data } = await api.post<CustomerRead>("/customers/", payload);
   return data;
 }
+
+export async function deleteCustomerAccount(): Promise<void> {
+  await api.delete("/customers/me");
+}
+

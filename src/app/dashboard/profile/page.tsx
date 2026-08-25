@@ -1,20 +1,25 @@
 "use client";
 
-import { AlertCircle, Briefcase } from "lucide-react";
+import { AlertTriangle, Briefcase, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/dashboard/dashboard-primitives";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useDeleteCustomerAccount } from "@/hooks/use-customers";
 import { useBecomeProvider } from "@/hooks/use-providers";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { useAuthStore } from "@/store/auth-store";
 
 export default function CustomerProfilePage() {
   const router = useRouter();
-  const { resolvedRole, decodedToken, user, accessToken, setSession } = useAuthStore();
+  const { resolvedRole, user, accessToken, setSession, logout } = useAuthStore();
   const becomeProviderMutation = useBecomeProvider();
+  const deleteCustomerMutation = useDeleteCustomerAccount();
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   async function handleBecomeProvider() {
     try {
@@ -35,43 +40,46 @@ export default function CustomerProfilePage() {
     }
   }
 
+  async function handleDeleteAccount() {
+    try {
+      await deleteCustomerMutation.mutateAsync();
+      toast.success("Your account has been deactivated successfully.");
+      logout();
+      router.push("/login");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to deactivate account"));
+    }
+  }
+
   const isProvider = resolvedRole?.jwtRole === "provider" || user?.role === "provider";
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Profile"
-        description="Account details and membership options."
+        description="Account details and settings."
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Session information</CardTitle>
+          <CardTitle>Account Details</CardTitle>
           <CardDescription>
-            Account details associated with your active session.
+            Personal information associated with your account.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <p className="text-muted-foreground">Name</p>
+              <p className="text-muted-foreground">Full name</p>
               <p className="mt-1 font-medium">{user?.name ?? "Customer User"}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Identifier / Email</p>
+              <p className="text-muted-foreground">Email address</p>
               <p className="mt-1 font-medium">{resolvedRole?.subject ?? user?.email ?? "Unknown"}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Role</p>
+              <p className="text-muted-foreground">Account role</p>
               <p className="mt-1 font-medium capitalize">{resolvedRole?.jwtRole ?? user?.role ?? "customer"}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Session expires</p>
-              <p className="mt-1 font-medium">
-                {decodedToken?.expiresAt
-                  ? new Date(decodedToken.expiresAt * 1000).toLocaleString()
-                  : "Not available"}
-              </p>
             </div>
           </div>
         </CardContent>
@@ -114,13 +122,70 @@ export default function CustomerProfilePage() {
         </CardContent>
       </Card>
 
-      <div className="flex gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
-        <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden="true" />
-        <p className="text-muted-foreground">
-          Account deactivation is supported via <code className="text-xs">DELETE /api/v1/customers/me</code>.
-        </p>
-      </div>
+      {/* Danger Zone: Account Deactivation */}
+      <Card className="border-destructive/30 bg-destructive/5">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="grid size-10 place-items-center rounded-lg bg-destructive/10 text-destructive">
+              <AlertTriangle className="size-5" aria-hidden="true" />
+            </div>
+            <div>
+              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+              <CardDescription>
+                Permanently deactivate your customer account and access.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Deactivating your account will prevent you from signing in, hide your profile, and cancel any pending booking requests.
+          </p>
+
+          {!showDeleteConfirm ? (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <Trash2 className="mr-2 size-4" aria-hidden="true" />
+              Deactivate my account
+            </Button>
+          ) : (
+            <div className="space-y-3 rounded-lg border border-destructive/40 bg-background p-4">
+              <p className="text-sm font-semibold text-destructive">
+                Are you sure you want to deactivate your account?
+              </p>
+              <p className="text-xs text-muted-foreground">
+                This action is immediate. You will be signed out and unable to log in until reactivated by an administrator.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  disabled={deleteCustomerMutation.isPending}
+                  onClick={handleDeleteAccount}
+                >
+                  {deleteCustomerMutation.isPending ? "Deactivating…" : "Yes, deactivate my account"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={deleteCustomerMutation.isPending}
+                  onClick={() => setShowDeleteConfirm(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
 

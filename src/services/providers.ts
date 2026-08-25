@@ -27,4 +27,9 @@ export async function becomeProvider(): Promise<Provider> {
   return data;
 }
 
+export async function deleteProviderAccount(): Promise<void> {
+  await api.delete("/providers/me");
+}
+
+
 

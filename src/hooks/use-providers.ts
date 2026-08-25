@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { becomeProvider, getProviders } from "@/services/providers";
+import { becomeProvider, deleteProviderAccount, getProviders } from "@/services/providers";
 
 export const providerQueryKeys = {
   all: ["providers"] as const,
@@ -24,4 +24,16 @@ export function useBecomeProvider() {
     },
   });
 }
+
+export function useDeleteProviderAccount() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteProviderAccount,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: providerQueryKeys.all });
+    },
+  });
+}
+
 
