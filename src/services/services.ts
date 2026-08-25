@@ -30,6 +30,15 @@ export async function getServices(params: ServiceListParams = {}): Promise<Servi
   if (params.max_price !== undefined && params.max_price !== null) {
     queryParams.max_price = params.max_price;
   }
+  if (params.lat !== undefined && params.lat !== null) {
+    queryParams.lat = params.lat;
+  }
+  if (params.lng !== undefined && params.lng !== null) {
+    queryParams.lng = params.lng;
+  }
+  if (params.radius !== undefined && params.radius !== null) {
+    queryParams.radius = params.radius;
+  }
   if (params.limit !== undefined && params.limit !== null) {
     queryParams.limit = params.limit;
   }

@@ -560,6 +560,10 @@ export interface components {
             description?: string | null;
             /** Price */
             price: number;
+            /** Latitude */
+            latitude?: number | null;
+            /** Longitude */
+            longitude?: number | null;
         };
         /** ServiceListResponse */
         ServiceListResponse: {
@@ -580,6 +584,10 @@ export interface components {
             description?: string | null;
             /** Price */
             price: number;
+            /** Latitude */
+            latitude?: number | null;
+            /** Longitude */
+            longitude?: number | null;
             /** Id */
             id: number;
             /** Owner Id */
@@ -602,6 +610,10 @@ export interface components {
             description?: string | null;
             /** Price */
             price: number;
+            /** Latitude */
+            latitude?: number | null;
+            /** Longitude */
+            longitude?: number | null;
             /** Id */
             id: number;
             /** Owner Id */
@@ -784,6 +796,9 @@ export interface operations {
                 category_name?: string | null;
                 min_price?: number | null;
                 max_price?: number | null;
+                lat?: number | null;
+                lng?: number | null;
+                radius?: number | null;
                 skip?: number;
                 limit?: number;
                 cursor?: number | null;

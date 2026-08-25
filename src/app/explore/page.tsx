@@ -1,7 +1,8 @@
 "use client";
 
-import { AlertCircle, Briefcase, ChevronLeft, ChevronRight, Search, SlidersHorizontal, Users, X } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { AlertCircle, Briefcase, Check, ChevronLeft, ChevronRight, LocateFixed, MapPin, Search, SlidersHorizontal, Users, X } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { ServiceCard } from "@/components/common/service-card";
 import { Footer } from "@/components/layout/footer";
@@ -11,18 +12,37 @@ import { Button } from "@/components/ui/button";
 import { useProviders } from "@/hooks/use-providers";
 import { useReviewsForService } from "@/hooks/use-reviews";
 import { useServiceCategories, useServices } from "@/hooks/use-services";
+import {
+  calculateDistanceKm,
+  getBrowserLocation,
+  LocationSuggestion,
+  POPULAR_LOCATIONS,
+  searchLocations,
+} from "@/lib/geocoding";
 import type { ServiceShort } from "@/services/services";
 
 const PAGE_SIZE = 12;
+
+const QUICK_LOCATIONS = [
+  "Koramangala",
+  "Indiranagar",
+  "Whitefield",
+  "HSR Layout",
+  "Bangalore Central (MG Road)",
+];
 
 function ServiceCardWithReviews({
   service,
   categoryName,
   providerName,
+  appliedLat,
+  appliedLng,
 }: {
   service: ServiceShort;
   categoryName: string;
   providerName?: string;
+  appliedLat?: number | null;
+  appliedLng?: number | null;
 }) {
   const reviewsQuery = useReviewsForService(service.id);
   const reviews = reviewsQuery.data?.items ?? [];
@@ -31,6 +51,22 @@ function ServiceCardWithReviews({
     reviewCount > 0
       ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviewCount
       : undefined;
+
+  let locationString: string | undefined = undefined;
+  if (
+    appliedLat != null &&
+    appliedLng != null &&
+    service.latitude != null &&
+    service.longitude != null
+  ) {
+    const dist = calculateDistanceKm(
+      appliedLat,
+      appliedLng,
+      service.latitude,
+      service.longitude,
+    );
+    locationString = `📍 ${dist} km away`;
+  }
 
   return (
     <ServiceCard
@@ -42,6 +78,7 @@ function ServiceCardWithReviews({
       price={service.price}
       rating={rating}
       reviewCount={reviewCount > 0 ? reviewCount : undefined}
+      location={locationString}
     />
   );
 }
@@ -60,19 +97,85 @@ function ServiceCardSkeleton() {
   );
 }
 
-export default function ExplorePage() {
+function ExploreContent() {
+  const searchParams = useSearchParams();
+  const initialQ = searchParams.get("q") || "";
+  const initialCategory = searchParams.get("category_id") ? Number(searchParams.get("category_id")) : null;
+  const initialLocation = searchParams.get("location") || "";
+  const initialLat = searchParams.get("lat") ? parseFloat(searchParams.get("lat")!) : null;
+  const initialLng = searchParams.get("lng") ? parseFloat(searchParams.get("lng")!) : null;
+  const initialRadius = searchParams.get("radius") ? parseFloat(searchParams.get("radius")!) : 10;
+
   const [activeTab, setActiveTab] = useState<"services" | "providers">("services");
-  const [searchInput, setSearchInput] = useState("");
-  const [query, setQuery] = useState("");
-  const [categoryId, setCategoryId] = useState<number | null>(null);
+  const [searchInput, setSearchInput] = useState(initialQ);
+  const [query, setQuery] = useState(initialQ);
+  const [categoryId, setCategoryId] = useState<number | null>(initialCategory);
   const [selectedProviderId, setSelectedProviderId] = useState<number | null>(null);
+
+  // Friendly location filtering states
+  const [locationInput, setLocationInput] = useState(initialLocation);
+  const [appliedLocationName, setAppliedLocationName] = useState<string | null>(
+    initialLocation || (initialLat !== null && initialLng !== null ? "Selected Location" : null),
+  );
+  const [appliedLat, setAppliedLat] = useState<number | null>(initialLat !== null && !isNaN(initialLat) ? initialLat : null);
+  const [appliedLng, setAppliedLng] = useState<number | null>(initialLng !== null && !isNaN(initialLng) ? initialLng : null);
+  const [radiusInput, setRadiusInput] = useState(String(initialRadius));
+  const [appliedRadius, setAppliedRadius] = useState<number | null>(
+    initialLat !== null && initialLng !== null ? initialRadius : null,
+  );
+
+  const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
+  const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [skip, setSkip] = useState(0);
+
+  const suggestionBoxRef = useRef<HTMLDivElement>(null);
+
+  async function handleLocationInputChange(value: string) {
+    setLocationInput(value);
+    setShowSuggestions(true);
+    if (!value.trim() || value.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    setIsSearchingSuggestions(true);
+    try {
+      const results = await searchLocations(value);
+      setSuggestions(results);
+    } finally {
+      setIsSearchingSuggestions(false);
+    }
+  }
+
+  // Click outside to close suggestion dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        suggestionBoxRef.current &&
+        !suggestionBoxRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const { data: categories = [], isLoading: areCategoriesLoading } = useServiceCategories();
   const providersQuery = useProviders();
   const params = useMemo(
-    () => ({ q: query || undefined, category_id: categoryId ?? undefined, skip, limit: PAGE_SIZE }),
-    [categoryId, query, skip],
+    () => ({
+      q: query || undefined,
+      category_id: categoryId ?? undefined,
+      lat: appliedLat ?? undefined,
+      lng: appliedLng ?? undefined,
+      radius: appliedRadius ?? undefined,
+      skip,
+      limit: PAGE_SIZE,
+    }),
+    [categoryId, query, appliedLat, appliedLng, appliedRadius, skip],
   );
   const servicesQuery = useServices(params);
 
@@ -85,6 +188,92 @@ export default function ExplorePage() {
   function selectCategory(id: number | null) {
     setSkip(0);
     setCategoryId(id);
+  }
+
+  function selectLocationSuggestion(suggestion: LocationSuggestion) {
+    const rad = Number(radiusInput) > 0 ? Number(radiusInput) : 10;
+    setLocationInput(suggestion.name);
+    setAppliedLocationName(suggestion.name);
+    setAppliedLat(suggestion.lat);
+    setAppliedLng(suggestion.lng);
+    setAppliedRadius(rad);
+    setLocationError(null);
+    setShowSuggestions(false);
+    setSkip(0);
+  }
+
+  function selectQuickLocation(name: string) {
+    const found = POPULAR_LOCATIONS.find((loc) => loc.name === name);
+    if (found) {
+      selectLocationSuggestion(found);
+    }
+  }
+
+  async function handleUseMyLocation() {
+    setIsLocating(true);
+    setLocationError(null);
+    try {
+      const pos = await getBrowserLocation();
+      const rad = Number(radiusInput) > 0 ? Number(radiusInput) : 10;
+      setLocationInput("Current Location");
+      setAppliedLocationName("Current Location");
+      setAppliedLat(pos.lat);
+      setAppliedLng(pos.lng);
+      setAppliedRadius(rad);
+      setShowSuggestions(false);
+      setSkip(0);
+    } catch {
+      setLocationError(
+        "Could not detect location automatically. Please select or type your area above.",
+      );
+    } finally {
+      setIsLocating(false);
+    }
+  }
+
+  async function handleLocationSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!locationInput.trim()) return;
+
+    // Check if matching suggestion already loaded
+    if (suggestions.length > 0) {
+      selectLocationSuggestion(suggestions[0]);
+      return;
+    }
+
+    // Direct search
+    setIsSearchingSuggestions(true);
+    try {
+      const results = await searchLocations(locationInput);
+      if (results.length > 0) {
+        selectLocationSuggestion(results[0]);
+      } else {
+        setLocationError(`No locations found for "${locationInput}". Try typing a major area or city.`);
+      }
+    } finally {
+      setIsSearchingSuggestions(false);
+    }
+  }
+
+  function clearLocationFilter() {
+    setLocationInput("");
+    setAppliedLocationName(null);
+    setAppliedLat(null);
+    setAppliedLng(null);
+    setAppliedRadius(null);
+    setLocationError(null);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setSkip(0);
+  }
+
+  function handleRadiusChange(newRadius: string) {
+    setRadiusInput(newRadius);
+    const radNum = Number(newRadius);
+    if (appliedLat !== null && appliedLng !== null && !isNaN(radNum) && radNum > 0) {
+      setAppliedRadius(radNum);
+      setSkip(0);
+    }
   }
 
   const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
@@ -189,8 +378,9 @@ export default function ExplorePage() {
 
         {activeTab === "services" ? (
           <section className="mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-14">
-            <div className="grid gap-10 lg:grid-cols-[15rem_minmax(0,1fr)]">
+            <div className="grid gap-10 lg:grid-cols-[16rem_minmax(0,1fr)]">
               <aside>
+                {/* Categories */}
                 <div className="flex items-center gap-2">
                   <SlidersHorizontal className="size-4" aria-hidden="true" />
                   <h2 className="font-semibold">Categories</h2>
@@ -224,6 +414,141 @@ export default function ExplorePage() {
                     ))
                   )}
                 </div>
+
+                {/* Location & Proximity Filter */}
+                <div className="mt-8 border-t pt-6 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="size-4 text-primary" aria-hidden="true" />
+                    <h2 className="font-semibold text-sm">Location Filter</h2>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Auto-detect button */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full flex items-center justify-center gap-2 text-xs"
+                      onClick={handleUseMyLocation}
+                      disabled={isLocating}
+                    >
+                      <LocateFixed className="size-3.5" />
+                      {isLocating ? "Detecting location…" : "Use my location"}
+                    </Button>
+
+                    {/* Area / City Search Input with Dropdown */}
+                    <div className="relative" ref={suggestionBoxRef}>
+                      <form onSubmit={handleLocationSubmit} className="relative">
+                        <input
+                          type="text"
+                          placeholder="Type city or area (e.g. Koramangala)"
+                          className="w-full rounded-md border bg-background pl-2.5 pr-8 py-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+                          value={locationInput}
+                          onFocus={() => setShowSuggestions(true)}
+                          onChange={(e) => handleLocationInputChange(e.target.value)}
+                        />
+                        {locationInput && (
+                          <button
+                            type="button"
+                            onClick={clearLocationFilter}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        )}
+                      </form>
+
+                      {/* Autocomplete Suggestions Box */}
+                      {showSuggestions && (suggestions.length > 0 || isSearchingSuggestions) && (
+                        <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
+                          {isSearchingSuggestions && (
+                            <div className="p-2 text-center text-xs text-muted-foreground">
+                              Searching areas…
+                            </div>
+                          )}
+                          {suggestions.map((loc, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => selectLocationSuggestion(loc)}
+                              className="flex w-full items-start gap-2 rounded px-2 py-1.5 text-left text-xs transition hover:bg-muted"
+                            >
+                              <MapPin className="mt-0.5 size-3 shrink-0 text-primary" />
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-foreground">{loc.name}</p>
+                                <p className="truncate text-[10px] text-muted-foreground">{loc.description}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Quick Popular Area Chips */}
+                    <div>
+                      <p className="text-[11px] font-medium text-muted-foreground mb-1.5">Popular areas:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {QUICK_LOCATIONS.map((area) => (
+                          <button
+                            key={area}
+                            type="button"
+                            onClick={() => selectQuickLocation(area)}
+                            className={`rounded-full border px-2 py-0.5 text-[11px] transition ${
+                              appliedLocationName === area
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-background text-muted-foreground hover:border-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {area.split(" ")[0]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Proximity Radius */}
+                    <div className="space-y-1">
+                      <label htmlFor="radius-select" className="text-xs text-muted-foreground">
+                        Search radius
+                      </label>
+                      <select
+                        id="radius-select"
+                        className="w-full rounded-md border bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-1 focus:ring-ring"
+                        value={radiusInput}
+                        onChange={(e) => handleRadiusChange(e.target.value)}
+                      >
+                        <option value="5">Within 5 km</option>
+                        <option value="10">Within 10 km (Standard)</option>
+                        <option value="20">Within 20 km</option>
+                        <option value="50">Within 50 km (City-wide)</option>
+                      </select>
+                    </div>
+
+                    {locationError && (
+                      <p className="text-xs text-destructive">{locationError}</p>
+                    )}
+
+                    {appliedLocationName && (
+                      <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1.5 font-medium text-primary">
+                            <Check className="size-3.5" />
+                            <span>Filtering by {appliedLocationName}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={clearLocationFilter}
+                            className="text-muted-foreground hover:text-destructive text-[11px] underline"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          Services within {appliedRadius ?? 10} km
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </aside>
 
               <div>
@@ -236,19 +561,35 @@ export default function ExplorePage() {
                       </p>
                     )}
                   </div>
-                  {selectedProviderId && (
-                    <div className="flex items-center gap-2 text-sm bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium">
-                      <span>Filtered by Provider: {providerNames.get(selectedProviderId) ?? `#${selectedProviderId}`}</span>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedProviderId(null)}
-                        className="hover:opacity-75"
-                        aria-label="Clear provider filter"
-                      >
-                        <X className="size-4" />
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {appliedLocationName && (
+                      <div className="flex items-center gap-2 text-sm bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium">
+                        <MapPin className="size-3.5" />
+                        <span>Within {appliedRadius ?? 10} km of {appliedLocationName}</span>
+                        <button
+                          type="button"
+                          onClick={clearLocationFilter}
+                          className="hover:opacity-75"
+                          aria-label="Clear location filter"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                    )}
+                    {selectedProviderId && (
+                      <div className="flex items-center gap-2 text-sm bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium">
+                        <span>Filtered by Provider: {providerNames.get(selectedProviderId) ?? `#${selectedProviderId}`}</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProviderId(null)}
+                          className="hover:opacity-75"
+                          aria-label="Clear provider filter"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {servicesQuery.isLoading ? (
@@ -292,6 +633,8 @@ export default function ExplorePage() {
                           service={service}
                           categoryName={categoryNames.get(service.category_id) ?? "Service"}
                           providerName={providerNames.get(service.owner_id)}
+                          appliedLat={appliedLat}
+                          appliedLng={appliedLng}
                         />
                       ))}
                     </div>
@@ -389,4 +732,18 @@ export default function ExplorePage() {
     </div>
   );
 }
+
+function ExploreWrapper() {
+  const searchParams = useSearchParams();
+  return <ExploreContent key={searchParams.toString()} />;
+}
+
+export default function ExplorePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background animate-pulse" />}>
+      <ExploreWrapper />
+    </Suspense>
+  );
+}
+
 
