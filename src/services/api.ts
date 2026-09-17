@@ -6,7 +6,8 @@ import axios, {
 } from "axios";
 
 export const ACCESS_TOKEN_STORAGE_KEY = "access_token";
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+const rawApiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
+export const API_BASE_URL = rawApiUrl.endsWith("/api/v1") ? rawApiUrl : `${rawApiUrl}/api/v1`;
 
 export interface ApiErrorResponse {
   detail?: string | { msg?: string; type?: string }[];
@@ -19,7 +20,8 @@ function getAccessToken(): string | null {
 }
 
 function isLoginRequest(config: InternalAxiosRequestConfig): boolean {
-  return config.url?.replace(/\/$/, "") === "/auth/login";
+  const cleanUrl = config.url?.replace(/\/$/, "") || "";
+  return cleanUrl === "/auth/login" || cleanUrl === "/api/v1/auth/login";
 }
 
 function attachRequestDefaults(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {

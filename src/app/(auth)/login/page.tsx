@@ -9,6 +9,7 @@ import {
   LogIn,
   Mail,
   ShieldAlert,
+  Sparkles,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -336,24 +337,41 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <main className="grid min-h-screen bg-muted/40 lg:grid-cols-2">
-      <section className="hidden bg-primary p-12 text-primary-foreground lg:flex lg:flex-col lg:justify-between">
-        <p className="font-heading text-3xl font-semibold tracking-tight">LocaBazaar</p>
-        <div className="max-w-md">
-          <p className="font-heading text-5xl leading-tight">
+    <main className="grid min-h-screen bg-muted/30 lg:grid-cols-2">
+      <section className="relative hidden overflow-hidden bg-gradient-to-br from-primary via-indigo-900 to-purple-950 p-12 text-primary-foreground lg:flex lg:flex-col lg:justify-between">
+        <div className="pointer-events-none absolute -right-16 -top-16 size-80 rounded-full bg-white/10 blur-3xl" />
+        <div className="pointer-events-none absolute -left-16 -bottom-16 size-80 rounded-full bg-purple-500/20 blur-3xl" />
+
+        <div className="relative z-10 flex items-center gap-2">
+          <span className="grid size-9 place-items-center rounded-xl bg-white/15 text-white backdrop-blur-md">
+            <Sparkles className="size-5" />
+          </span>
+          <p className="font-heading text-2xl font-bold tracking-tight text-white">LocaBazaar</p>
+        </div>
+
+        <div className="relative z-10 max-w-md space-y-6">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white/90 backdrop-blur-md">
+            <span>✨ Verified Local Services Marketplace</span>
+          </div>
+          <h2 className="font-heading text-4xl font-extrabold leading-tight text-white sm:text-5xl">
             Trusted local services, thoughtfully connected.
-          </p>
-          <p className="mt-6 text-base leading-7 text-primary-foreground/75">
-            Sign in to manage bookings and discover the people who keep your neighbourhood moving.
+          </h2>
+          <p className="text-base leading-relaxed text-white/80">
+            Sign in to manage bookings, discover certified specialists, and build lasting neighborhood trust.
           </p>
         </div>
-        <p className="text-sm text-primary-foreground/65">
-          Local expertise. Better everyday services.
-        </p>
+
+        <div className="relative z-10 flex items-center justify-between border-t border-white/15 pt-6 text-xs text-white/70">
+          <span>100% Verified Specialists</span>
+          <span>•</span>
+          <span>Instant Scheduling</span>
+          <span>•</span>
+          <span>Secure Platform</span>
+        </div>
       </section>
 
       <section className="flex items-center justify-center px-5 py-12 sm:px-8">
-        <Suspense fallback={<div className="h-96 w-full max-w-md animate-pulse rounded-lg bg-card" />}>
+        <Suspense fallback={<div className="h-96 w-full max-w-md animate-pulse rounded-2xl bg-card" />}>
           <LoginForm />
         </Suspense>
       </section>

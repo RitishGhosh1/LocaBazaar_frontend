@@ -686,33 +686,58 @@ function ExploreContent() {
                 <p className="mt-2 text-sm text-muted-foreground">Provider accounts will appear here once registered.</p>
               </div>
             ) : (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {eligibleProviders.map((provider) => (
                   <div
                     key={provider.id}
-                    className="flex flex-col justify-between rounded-lg border bg-card p-6 shadow-sm transition hover:shadow-md"
+                    className="group flex flex-col justify-between rounded-2xl border bg-card p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
                   >
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <Badge variant="secondary">Verified Provider</Badge>
+                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                          <Check className="size-3" />
+                          Verified Specialist
+                        </span>
+                        <span className="text-[11px] font-medium text-muted-foreground">ID #{provider.id}</span>
                       </div>
-                      <div>
-                        <h3 className="font-heading text-xl font-semibold">{provider.name}</h3>
-                        <p className="text-sm text-muted-foreground">{provider.email}</p>
+
+                      <div className="flex items-center gap-3.5">
+                        <div className="grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-primary/20 to-indigo-500/10 text-lg font-bold text-primary shrink-0">
+                          {provider.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <h3 className="font-heading text-lg font-bold text-foreground group-hover:text-primary transition-colors">
+                            {provider.name}
+                          </h3>
+                          <p className="text-xs text-muted-foreground">{provider.email}</p>
+                        </div>
                       </div>
-                      {provider.bio && (
-                        <p className="text-sm text-muted-foreground line-clamp-3">{provider.bio}</p>
+
+                      {provider.bio ? (
+                        <p className="text-xs leading-relaxed text-muted-foreground line-clamp-3">
+                          {provider.bio}
+                        </p>
+                      ) : (
+                        <p className="text-xs italic text-muted-foreground">
+                          LocaBazaar verified service partner available for doorstep appointments.
+                        </p>
                       )}
                     </div>
 
                     <div className="mt-6 flex items-center justify-between border-t pt-4">
-                      <Badge variant={provider.is_active ? "success" : "muted"}>
-                        {provider.is_active ? "Active" : "Inactive"}
-                      </Badge>
+                      {provider.phone ? (
+                        <span className="text-xs font-medium text-muted-foreground">
+                          📞 +91 {provider.phone}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Online booking</span>
+                      )}
+
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="default"
                         type="button"
+                        className="rounded-xl font-semibold cursor-pointer"
                         onClick={() => {
                           setSelectedProviderId(provider.id);
                           setActiveTab("services");

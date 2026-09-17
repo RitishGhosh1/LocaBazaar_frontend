@@ -5,6 +5,7 @@ import api, { type ApiErrorResponse } from "@/services/api";
 export const AUTH_ENDPOINTS = {
   login: "/auth/login",
   googleLogin: "/auth/login/google",
+  verifyEmail: "/auth/verify-email",
 } as const;
 
 export interface LoginRequest {
@@ -71,4 +72,20 @@ export async function login(credentials: LoginRequest): Promise<AuthSession> {
     throw toAuthApiError(error);
   }
 }
+
+export interface VerifyEmailResponse {
+  message: string;
+}
+
+export async function verifyEmail(token: string): Promise<VerifyEmailResponse> {
+  try {
+    const { data } = await api.get<VerifyEmailResponse>(AUTH_ENDPOINTS.verifyEmail, {
+      params: { token },
+    });
+    return data;
+  } catch (error) {
+    throw toAuthApiError(error);
+  }
+}
+
 
