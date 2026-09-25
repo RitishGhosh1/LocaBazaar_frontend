@@ -3,6 +3,8 @@ import type { components } from "@/types/api";
 import api from "@/services/api";
 
 export type Booking = components["schemas"]["BookingRead"];
+export type BookingCustomer = components["schemas"]["BookingCustomerRead"];
+export type BookingService = components["schemas"]["BookingServiceRead"];
 export type BookingStatus = components["schemas"]["BookingStatus"];
 export type BookingCreate = components["schemas"]["BookingCreate"];
 export type BookingStatusUpdate = components["schemas"]["BookingStatusUpdate"];
@@ -29,5 +31,10 @@ export async function updateBookingStatus(
   payload: BookingStatusUpdate,
 ): Promise<Booking> {
   const { data } = await api.patch<Booking>(`/bookings/${bookingId}`, payload);
+  return data;
+}
+
+export async function cancelBooking(bookingId: number): Promise<Booking> {
+  const { data } = await api.post<Booking>(`/bookings/${bookingId}/cancel`);
   return data;
 }

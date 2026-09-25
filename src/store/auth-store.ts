@@ -22,6 +22,7 @@ export interface AuthState {
   isInitializing: boolean;
   login: (email: string, password: string) => Promise<void>;
   setSession: (accessToken: string, user?: AuthUser | null) => void;
+  updateUser: (updatedUser: Partial<AuthUser>) => void;
   logout: () => void;
   initialize: () => Promise<void>;
 }
@@ -98,7 +99,7 @@ function buildSessionState(
   };
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   accessToken: null,
   tokenType: null,
   user: null,
@@ -121,6 +122,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     const sessionState = buildSessionState(accessToken, user);
     persistSession(accessToken, sessionState.user);
     set({ ...sessionState, isInitializing: false });
+  },
+
+  updateUser: (updatedUser) => {
+    const currentUser = get().user;
+    if (!currentUser) return;
+    const mergedUser = { ...currentUser, ...updatedUser };
+    persistSession(get().accessToken ?? "", mergedUser);
+    set({ user: mergedUser });
   },
 
   logout: () => {

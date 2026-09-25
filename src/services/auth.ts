@@ -6,6 +6,7 @@ export const AUTH_ENDPOINTS = {
   login: "/auth/login",
   googleLogin: "/auth/login/google",
   verifyEmail: "/auth/verify-email",
+  me: "/auth/me",
 } as const;
 
 export interface LoginRequest {
@@ -17,8 +18,11 @@ export interface AuthUser {
   id: number;
   email: string;
   name: string;
+  phone?: string | null;
+  bio?: string | null;
   role: string;
   is_superuser: boolean;
+  is_verified?: boolean;
 }
 
 export interface AuthSession {
@@ -88,4 +92,36 @@ export async function verifyEmail(token: string): Promise<VerifyEmailResponse> {
   }
 }
 
+export async function resendVerificationEmail(): Promise<VerifyEmailResponse> {
+  try {
+    const { data } = await api.post<VerifyEmailResponse>(AUTH_ENDPOINTS.verifyEmail);
+    return data;
+  } catch (error) {
+    throw toAuthApiError(error);
+  }
+}
+
+export interface UpdateProfileRequest {
+  name?: string;
+  phone?: string | null;
+  bio?: string | null;
+}
+
+export async function getCurrentUser(): Promise<AuthUser> {
+  try {
+    const { data } = await api.get<AuthUser>(AUTH_ENDPOINTS.me);
+    return data;
+  } catch (error) {
+    throw toAuthApiError(error);
+  }
+}
+
+export async function updateCurrentUser(payload: UpdateProfileRequest): Promise<AuthUser> {
+  try {
+    const { data } = await api.patch<AuthUser>(AUTH_ENDPOINTS.me, payload);
+    return data;
+  } catch (error) {
+    throw toAuthApiError(error);
+  }
+}
 

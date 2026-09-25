@@ -79,6 +79,7 @@ function ServiceCardWithReviews({
       rating={rating}
       reviewCount={reviewCount > 0 ? reviewCount : undefined}
       location={locationString}
+      imageUrl={service.image_url}
     />
   );
 }

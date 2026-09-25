@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { BookingList } from "@/components/dashboard/booking-list";
 import {
   EmptyState,
+  ErrorState,
+  LoadingScreen,
   PageHeader,
 } from "@/components/dashboard/dashboard-primitives";
 import { Button } from "@/components/ui/button";
@@ -76,27 +78,27 @@ export default function ProviderBookingsPage() {
         description="Review customer booking requests for your listed services."
       />
 
-      {bookingsQuery.isError ? (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-6 space-y-3 text-sm">
-          <div className="flex items-center gap-2 font-semibold text-amber-700">
-            <AlertCircle className="size-5" />
-            <span>Backend Provider Booking Restriction</span>
-          </div>
-          <p className="text-muted-foreground">
-            The current FastAPI endpoint <code className="text-xs font-semibold">GET /api/v1/bookings/</code> is restricted to customer accounts on the backend.
-          </p>
-          <p className="text-muted-foreground">
-            Status updates via <code className="text-xs font-semibold">PATCH /api/v1/bookings/{"{id}"}</code> are supported when acting on specific booking IDs assigned to your services.
-          </p>
-        </div>
+      {bookingsQuery.isLoading ? (
+        <LoadingScreen message="Loading customer bookings…" />
+      ) : bookingsQuery.isError ? (
+        <ErrorState
+          title="Unable to load bookings"
+          description={getApiErrorMessage(bookingsQuery.error, "Could not load bookings at this time.")}
+          onRetry={() => bookingsQuery.refetch()}
+        />
       ) : bookings.length === 0 ? (
         <EmptyState
           icon={CalendarDays}
           title="No bookings yet"
-          description="Customer bookings for your services will appear here."
+          description="Customer bookings for your services will appear here with contact details."
         />
       ) : (
-        <BookingList bookings={bookings} showServiceLink={false} actions={renderActions} />
+        <BookingList
+          bookings={bookings}
+          showServiceLink={false}
+          showCustomerDetails={true}
+          actions={renderActions}
+        />
       )}
     </div>
   );

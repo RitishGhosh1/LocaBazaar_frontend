@@ -4,6 +4,7 @@ import {
   createBooking,
   getBookings,
   updateBookingStatus,
+  cancelBooking,
   type BookingListParams,
   type BookingStatusUpdate,
 } from "@/services/bookings";
@@ -37,6 +38,17 @@ export function useUpdateBookingStatus() {
   return useMutation({
     mutationFn: ({ bookingId, payload }: { bookingId: number; payload: BookingStatusUpdate }) =>
       updateBookingStatus(bookingId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: bookingQueryKeys.all });
+    },
+  });
+}
+
+export function useCancelBooking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (bookingId: number) => cancelBooking(bookingId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: bookingQueryKeys.all });
     },

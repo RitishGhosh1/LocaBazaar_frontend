@@ -4,6 +4,9 @@ import {
   createService,
   getMyServices,
   toggleServiceStatus,
+  updateService,
+  deleteService,
+  type ServiceUpdatePayload,
 } from "@/services/services";
 import { serviceQueryKeys } from "@/hooks/use-services";
 
@@ -36,6 +39,31 @@ export function useToggleServiceStatus() {
 
   return useMutation({
     mutationFn: toggleServiceStatus,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: providerServiceQueryKeys.all });
+      void queryClient.invalidateQueries({ queryKey: serviceQueryKeys.all });
+    },
+  });
+}
+
+export function useUpdateService() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ serviceId, payload }: { serviceId: number; payload: ServiceUpdatePayload }) =>
+      updateService(serviceId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: providerServiceQueryKeys.all });
+      void queryClient.invalidateQueries({ queryKey: serviceQueryKeys.all });
+    },
+  });
+}
+
+export function useDeleteService() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (serviceId: number) => deleteService(serviceId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: providerServiceQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: serviceQueryKeys.all });

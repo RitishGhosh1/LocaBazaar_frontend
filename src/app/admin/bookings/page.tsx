@@ -72,13 +72,24 @@ export default function AdminBookingsPage() {
                 {bookings.map((booking) => {
                   const serviceName = serviceNames.get(booking.service_id) ?? `Service #${booking.service_id}`;
                   const bookingUserId = (booking as { user_id?: number }).user_id;
-                  const userName = bookingUserId ? (userNames.get(bookingUserId) ?? `#${bookingUserId}`) : "Customer";
+                  const customer = booking.customer ?? booking.user;
+                  const userName = customer?.name ?? (bookingUserId ? (userNames.get(bookingUserId) ?? `#${bookingUserId}`) : "Customer");
 
                   return (
                     <tr key={booking.id} className="border-b last:border-b-0">
                       <td className="px-4 py-3 text-muted-foreground font-mono text-xs">#{booking.id}</td>
                       <td className="px-4 py-3 font-medium">{serviceName}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{userName}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-foreground">{userName}</span>
+                          {customer?.phone && (
+                            <span className="text-xs text-muted-foreground font-mono">{customer.phone}</span>
+                          )}
+                          {customer?.email && (
+                            <span className="text-xs text-muted-foreground">{customer.email}</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         <Badge
                           variant={

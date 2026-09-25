@@ -47,25 +47,25 @@ const TRUST_STATS = [
     icon: ShieldCheck,
     title: "100% Verified Pros",
     description: "Background-checked & skill-certified specialists",
-    color: "text-emerald-800 dark:text-emerald-300 bg-emerald-100/90 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/60",
+    color: "text-primary bg-primary/10 border border-primary/20",
   },
   {
     icon: BadgeCheck,
     title: "Upfront Fixed Pricing",
     description: "Clear prices with zero hidden charges",
-    color: "text-indigo-800 dark:text-indigo-300 bg-indigo-100/90 dark:bg-indigo-950/60 border border-indigo-200/80 dark:border-indigo-800/60",
+    color: "text-primary bg-primary/10 border border-primary/20",
   },
   {
     icon: Clock,
     title: "On-Time Arrival",
     description: "Punctual doorstep arrival on your chosen slot",
-    color: "text-amber-900 dark:text-amber-300 bg-amber-100/90 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800/60",
+    color: "text-primary bg-primary/10 border border-primary/20",
   },
   {
     icon: Star,
     title: "4.9/5 Average Rating",
     description: "Authentic reviews from verified local homeowners",
-    color: "text-purple-800 dark:text-purple-300 bg-purple-100/90 dark:bg-purple-950/60 border border-purple-200/80 dark:border-purple-800/60",
+    color: "text-primary bg-primary/10 border border-primary/20",
   },
 ];
 
@@ -189,7 +189,7 @@ export default function Home() {
               {/* Search Box */}
               <form
                 onSubmit={handleSearchSubmit}
-                className="mt-8 flex flex-col gap-2 rounded-2xl border bg-card p-2.5 shadow-xl shadow-primary/5 sm:flex-row sm:items-center sm:gap-3"
+                className="mt-8 flex flex-col gap-2 rounded-xl border border-border/80 bg-card p-2 shadow-lg shadow-black/5 dark:shadow-none sm:flex-row sm:items-center sm:gap-2"
               >
                 <div className="flex flex-1 items-center gap-3 px-3 py-1.5">
                   <Search className="size-5 text-muted-foreground shrink-0" aria-hidden="true" />
@@ -203,14 +203,14 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={() => setSearchQuery("")}
-                      className="text-xs text-muted-foreground hover:text-foreground"
+                      className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
                     >
                       Clear
                     </button>
                   )}
                 </div>
 
-                <Button size="lg" className="w-full rounded-xl sm:w-auto font-semibold shadow-sm" type="submit">
+                <Button size="lg" className="w-full rounded-lg sm:w-auto font-semibold shadow-xs" type="submit">
                   <Search className="size-4 mr-1.5" aria-hidden="true" />
                   Search Services
                 </Button>

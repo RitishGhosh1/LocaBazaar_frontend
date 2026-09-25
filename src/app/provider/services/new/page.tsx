@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Check, LocateFixed, MapPin, X } from "lucide-react";
+import { ArrowLeft, Check, Image as ImageIcon, LocateFixed, MapPin, Upload, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -24,6 +24,7 @@ import {
   POPULAR_LOCATIONS,
   searchLocations,
 } from "@/lib/geocoding";
+import { uploadImage, getFullImageUrl } from "@/services/uploads";
 
 const serviceSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -41,6 +42,10 @@ export default function NewProviderServicePage() {
   const router = useRouter();
   const categoriesQuery = useCategories();
   const createMutation = useCreateService();
+
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [areaInput, setAreaInput] = useState("");
   const [selectedAreaName, setSelectedAreaName] = useState<string | null>(null);
@@ -127,6 +132,21 @@ export default function NewProviderServicePage() {
     }
   }
 
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    try {
+      const res = await uploadImage(file);
+      setImageUrl(res.url);
+      toast.success("Service photo uploaded successfully!");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to upload image"));
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
   async function onSubmit(values: ServiceFormOutput) {
     try {
       await createMutation.mutateAsync({
@@ -136,6 +156,7 @@ export default function NewProviderServicePage() {
         price: values.price,
         latitude: values.latitude ?? null,
         longitude: values.longitude ?? null,
+        image_url: imageUrl || null,
       });
       toast.success("Service created successfully");
       router.push("/provider/services");
@@ -203,6 +224,63 @@ export default function NewProviderServicePage() {
           <div className="space-y-2">
             <Label htmlFor="description">Description (optional)</Label>
             <Textarea id="description" rows={4} {...form.register("description")} />
+          </div>
+
+          {/* Service Image / Cover Photo Upload */}
+          <div className="space-y-2">
+            <Label>Service Cover Image (optional)</Label>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+            />
+            {imageUrl ? (
+              <div className="relative overflow-hidden rounded-xl border bg-muted aspect-[21/9] max-h-48 group">
+                <img
+                  src={getFullImageUrl(imageUrl)!}
+                  alt="Service preview"
+                  className="size-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                  >
+                    Change Image
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => setImageUrl(null)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="flex flex-col items-center justify-center rounded-xl border border-dashed p-6 text-center hover:bg-muted/40 transition cursor-pointer"
+              >
+                <div className="grid size-10 place-items-center rounded-full bg-primary/10 text-primary mb-2">
+                  <Upload className="size-5" />
+                </div>
+                <p className="text-xs font-semibold text-foreground">
+                  {isUploading ? "Uploading image…" : "Click to upload service photo"}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  JPEG, PNG, WEBP or GIF (Max 5MB)
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

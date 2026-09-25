@@ -61,15 +61,11 @@ export default function ProviderDashboardPage() {
         {bookingsQuery.isLoading ? (
           <LoadingScreen message="Loading bookings…" />
         ) : bookingsQuery.isError ? (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-5 text-sm space-y-2">
-            <div className="flex items-center gap-2 font-semibold text-amber-700">
-              <AlertCircle className="size-4" />
-              <span>Provider Bookings Notice</span>
-            </div>
-            <p className="text-muted-foreground">
-              The backend endpoint <code className="text-xs">GET /api/v1/bookings/</code> is customer-restricted on the server. Action specific bookings via your direct booking IDs.
-            </p>
-          </div>
+          <ErrorState
+            title="Unable to load bookings"
+            description="Could not fetch bookings right now."
+            onRetry={() => bookingsQuery.refetch()}
+          />
         ) : pendingBookings.length === 0 ? (
           <EmptyState
             icon={CalendarDays}
@@ -77,7 +73,7 @@ export default function ProviderDashboardPage() {
             description="New customer requests will appear here for confirmation."
           />
         ) : (
-          <BookingList bookings={pendingBookings} showServiceLink={false} />
+          <BookingList bookings={pendingBookings} showServiceLink={false} showCustomerDetails={true} />
         )}
       </section>
     </div>

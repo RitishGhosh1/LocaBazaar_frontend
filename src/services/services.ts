@@ -89,3 +89,23 @@ export async function toggleServiceStatus(serviceId: number): Promise<ServiceDet
   const { data } = await api.patch<ServiceDetails>(`/services/${serviceId}/toggle`);
   return data;
 }
+
+export interface ServiceUpdatePayload {
+  name?: string;
+  category_id?: number;
+  description?: string | null;
+  price?: number;
+  image_url?: string | null;
+}
+
+export async function updateService(
+  serviceId: number,
+  payload: ServiceUpdatePayload
+): Promise<ServiceDetails> {
+  const { data } = await api.patch<ServiceDetails>(`/services/${serviceId}`, payload);
+  return data;
+}
+
+export async function deleteService(serviceId: number): Promise<void> {
+  await api.delete(`/services/${serviceId}`);
+}

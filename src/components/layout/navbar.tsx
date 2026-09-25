@@ -62,24 +62,24 @@ export function Navbar() {
 
   const roleBadgeClass =
     appRole === "superadmin"
-      ? "bg-purple-100 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800/60"
+      ? "bg-primary/10 text-primary border-primary/20"
       : appRole === "provider"
-      ? "bg-sky-100 dark:bg-sky-950/70 text-sky-800 dark:text-sky-300 border-sky-200 dark:border-sky-800/60"
-      : "bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60";
+      ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20"
+      : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/90 backdrop-blur-md">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8" aria-label="Main navigation">
         {/* Brand Logo */}
         <Link
           href="/"
-          className="flex items-center gap-2 group transition"
+          className="flex items-center gap-2.5 group transition"
           onClick={closeMenu}
         >
-          <span className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-indigo-600 text-white shadow-md shadow-primary/20 group-hover:scale-105 transition-transform">
+          <span className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm group-hover:scale-105 transition-transform">
             <Sparkles className="size-5" />
           </span>
-          <span className="font-heading text-xl font-extrabold tracking-tight text-foreground group-hover:text-primary transition-colors">
+          <span className="font-heading text-xl font-extrabold tracking-tight text-foreground transition-colors">
             Loca<span className="text-primary">Bazaar</span>
           </span>
         </Link>
@@ -93,10 +93,10 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "rounded-full px-4 py-1.5 text-sm font-medium transition-all",
+                  "rounded-md px-3.5 py-1.5 text-sm font-medium transition-all",
                   isActive
                     ? "bg-secondary text-foreground font-semibold"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 )}
               >
                 {link.label}
@@ -113,13 +113,13 @@ export function Navbar() {
             <div className="flex items-center gap-2">
               <Link
                 href="/login"
-                className="rounded-xl px-3.5 py-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground hover:bg-muted/40"
+                className="rounded-lg px-3.5 py-1.5 text-sm font-semibold text-muted-foreground transition hover:text-foreground hover:bg-muted/50"
               >
                 Log In
               </Link>
               <Link
                 href="/register"
-                className={cn(buttonVariants({ size: "sm" }), "rounded-xl font-semibold shadow-xs")}
+                className={cn(buttonVariants({ size: "sm" }), "rounded-lg font-semibold shadow-xs")}
               >
                 Get Started
               </Link>

@@ -4,6 +4,7 @@ import api from "@/services/api";
 
 export type Review = components["schemas"]["ReviewRead"];
 export type ReviewCreate = components["schemas"]["ReviewCreate"];
+export type ReviewUpdate = components["schemas"]["ReviewUpdate"];
 export type ReviewListResponse = components["schemas"]["ReviewListResponse"];
 
 export interface ReviewListParams {
@@ -12,8 +13,22 @@ export interface ReviewListParams {
   cursor?: number | null;
 }
 
-export async function createReview(payload: ReviewCreate): Promise<ReviewCreate> {
-  const { data } = await api.post<ReviewCreate>("/reviews/", payload);
+export async function createReview(payload: ReviewCreate): Promise<Review> {
+  const { data } = await api.post<Review>("/reviews/", payload);
+  return data;
+}
+
+export async function updateReview(reviewId: number, payload: ReviewUpdate): Promise<Review> {
+  const { data } = await api.patch<Review>(`/reviews/${reviewId}`, payload);
+  return data;
+}
+
+export async function deleteReview(reviewId: number): Promise<void> {
+  await api.delete(`/reviews/${reviewId}`);
+}
+
+export async function getMyReviews(): Promise<Review[]> {
+  const { data } = await api.get<Review[]>("/reviews/mine");
   return data;
 }
 

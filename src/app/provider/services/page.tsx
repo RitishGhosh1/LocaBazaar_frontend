@@ -1,6 +1,6 @@
 "use client";
 
-import { Briefcase, Plus } from "lucide-react";
+import { Briefcase, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useCategories } from "@/hooks/use-categories";
-import { useMyServices, useToggleServiceStatus } from "@/hooks/use-provider-services";
+import { useMyServices, useToggleServiceStatus, useDeleteService } from "@/hooks/use-provider-services";
 import { formatPrice } from "@/lib/format";
 import { getApiErrorMessage } from "@/lib/api-error";
 
@@ -21,6 +21,7 @@ export default function ProviderServicesPage() {
   const servicesQuery = useMyServices();
   const categoriesQuery = useCategories();
   const toggleMutation = useToggleServiceStatus();
+  const deleteMutation = useDeleteService();
 
   const categoryNames = new Map((categoriesQuery.data ?? []).map((c) => [c.id, c.name]));
 
@@ -30,6 +31,18 @@ export default function ProviderServicesPage() {
       toast.success("Service status updated");
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to update service status"));
+    }
+  }
+
+  async function handleDelete(serviceId: number) {
+    if (!window.confirm("Are you sure you want to delete this service?")) {
+      return;
+    }
+    try {
+      await deleteMutation.mutateAsync(serviceId);
+      toast.success("Service deleted successfully");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to delete service"));
     }
   }
 
@@ -93,15 +106,28 @@ export default function ProviderServicesPage() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        type="button"
-                        disabled={toggleMutation.isPending}
-                        onClick={() => handleToggle(service.id)}
-                      >
-                        {service.is_active ? "Deactivate" : "Activate"}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          type="button"
+                          disabled={toggleMutation.isPending}
+                          onClick={() => handleToggle(service.id)}
+                        >
+                          {service.is_active ? "Deactivate" : "Activate"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          type="button"
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => handleDelete(service.id)}
+                          aria-label="Delete service"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -110,11 +136,6 @@ export default function ProviderServicesPage() {
           </div>
         </div>
       )}
-
-      <p className="text-sm text-muted-foreground">
-        Service editing and deletion are not available in the current API. You can toggle active status via{" "}
-        <code className="text-xs">PATCH /api/v1/services/{"{id}"}/toggle</code>.
-      </p>
     </div>
   );
 }

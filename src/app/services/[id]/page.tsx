@@ -1,12 +1,13 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import {
   ArrowLeft,
   BadgeCheck,
   Calendar,
   CheckCircle2,
   Clock,
+  Edit2,
   MapPin,
   Phone,
   ShieldAlert,
@@ -14,6 +15,7 @@ import {
   Sparkles,
   Star,
   Tag,
+  Trash2,
   User,
   Wrench,
 } from "lucide-react";
@@ -24,15 +26,17 @@ import { toast } from "sonner";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCreateBooking } from "@/hooks/use-bookings";
 import { useProviders } from "@/hooks/use-providers";
-import { useReviewsForService } from "@/hooks/use-reviews";
+import { useReviewsForService, useUpdateReview, useDeleteReview } from "@/hooks/use-reviews";
 import { useService, useServiceCategories } from "@/hooks/use-services";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { formatPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
+import { getFullImageUrl } from "@/services/uploads";
 
 interface ServiceDetailPageProps {
   params: Promise<{ id: string }>;
@@ -49,6 +53,12 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
   const providersQuery = useProviders();
   const reviewsQuery = useReviewsForService(serviceId);
   const createBookingMutation = useCreateBooking();
+  const updateReviewMutation = useUpdateReview();
+  const deleteReviewMutation = useDeleteReview();
+
+  const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
+  const [editRating, setEditRating] = useState(5);
+  const [editComment, setEditComment] = useState("");
 
   const service = serviceQuery.data;
   const categories = categoriesQuery.data ?? [];
@@ -87,6 +97,32 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
       router.push("/dashboard");
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to create booking"));
+    }
+  }
+
+  async function handleSaveEditReview(reviewId: number) {
+    try {
+      await updateReviewMutation.mutateAsync({
+        reviewId,
+        payload: {
+          rating: editRating,
+          comment: editComment.trim() || null,
+        },
+      });
+      toast.success("Review updated successfully!");
+      setEditingReviewId(null);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to update review"));
+    }
+  }
+
+  async function handleDeleteReview(reviewId: number) {
+    if (!window.confirm("Are you sure you want to delete your review?")) return;
+    try {
+      await deleteReviewMutation.mutateAsync(reviewId);
+      toast.success("Review deleted successfully!");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to delete review"));
     }
   }
 
@@ -145,93 +181,106 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
               {/* Left Column: Details, Provider Bio, Reviews */}
               <div className="space-y-8">
                 {/* Header Banner Card */}
-                <div className="overflow-hidden rounded-3xl border bg-card p-6 shadow-sm sm:p-8">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                      <Tag className="size-3.5" aria-hidden="true" />
-                      {categoryName}
-                    </span>
-
-                    {/* Interactive Clickable Available Badge */}
-                    <button
-                      type="button"
-                      onClick={scrollToBooking}
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition cursor-pointer",
-                        service.is_active
-                          ? "border-emerald-200 bg-emerald-100/90 text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/70 dark:text-emerald-300 hover:bg-emerald-200/90"
-                          : "border-border bg-muted text-muted-foreground"
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "size-2 rounded-full",
-                          service.is_active ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground"
-                        )}
+                <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
+                  {/* Service Image Banner if available */}
+                  {service.image_url && (
+                    <div className="aspect-[21/9] w-full overflow-hidden border-b bg-muted">
+                      <img
+                        src={getFullImageUrl(service.image_url)!}
+                        alt={service.name}
+                        className="size-full object-cover"
                       />
-                      <span>{service.is_active ? "Available for Booking (Click to Book)" : "Currently Inactive"}</span>
-                    </button>
-                  </div>
+                    </div>
+                  )}
 
-                  <h1 className="mt-4 font-heading text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-                    {service.name}
-                  </h1>
-
-                  {/* Rating & Review Counter */}
-                  <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                    {averageRating ? (
-                      <div className="flex items-center gap-1 font-semibold text-amber-500">
-                        <Star className="size-4 fill-amber-400 text-amber-400" />
-                        <span>{averageRating}</span>
-                        <span className="text-xs text-muted-foreground font-normal">
-                          ({reviewsList.length} verified {reviewsList.length === 1 ? "review" : "reviews"})
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                        <Star className="size-3.5 text-muted-foreground" />
-                        New Service Listing
+                  <div className="p-6 sm:p-8">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                        <Tag className="size-3.5" aria-hidden="true" />
+                        {categoryName}
                       </span>
-                    )}
 
-                    <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                      <ShieldCheck className="size-3.5" />
-                      Verified Specialist
-                    </span>
-                  </div>
+                      {/* Interactive Clickable Available Badge */}
+                      <button
+                        type="button"
+                        onClick={scrollToBooking}
+                        className={cn(
+                          "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition cursor-pointer",
+                          service.is_active
+                            ? "border-emerald-200 bg-emerald-100/90 text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/70 dark:text-emerald-300 hover:bg-emerald-200/90"
+                            : "border-border bg-muted text-muted-foreground"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "size-2 rounded-full",
+                            service.is_active ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground"
+                          )}
+                        />
+                        <span>{service.is_active ? "Available for Booking (Click to Book)" : "Currently Inactive"}</span>
+                      </button>
+                    </div>
 
-                  {/* Service Description */}
-                  <div className="mt-6 border-t pt-6">
-                    <h2 className="text-sm font-bold tracking-wide uppercase text-muted-foreground">
-                      Service Overview & Scope
-                    </h2>
-                    <p className="mt-3 text-base leading-7 text-muted-foreground whitespace-pre-line">
-                      {service.description ||
-                        "Full end-to-end service executed by trained local professionals using certified equipment."}
-                    </p>
-                  </div>
+                    <h1 className="mt-4 font-heading text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+                      {service.name}
+                    </h1>
 
-                  {/* Included Highlights */}
-                  <div className="mt-6 rounded-2xl border border-border/70 bg-secondary/30 p-5">
-                    <h3 className="text-xs font-bold tracking-wider uppercase text-foreground">
-                      What&apos;s Included in This Service
-                    </h3>
-                    <div className="mt-3 grid gap-2.5 sm:grid-cols-2 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-                        <span>Dedicated certified technician</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-                        <span>Complete diagnostic & safety check</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-                        <span>High-grade commercial tools</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-                        <span>30-day workmanship assurance</span>
+                    {/* Rating & Review Counter */}
+                    <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                      {averageRating ? (
+                        <div className="flex items-center gap-1 font-semibold text-amber-500">
+                          <Star className="size-4 fill-amber-400 text-amber-400" />
+                          <span>{averageRating}</span>
+                          <span className="text-xs text-muted-foreground font-normal">
+                            ({reviewsList.length} verified {reviewsList.length === 1 ? "review" : "reviews"})
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <Star className="size-3.5 text-muted-foreground" />
+                          New Service Listing
+                        </span>
+                      )}
+
+                      <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                        <ShieldCheck className="size-3.5" />
+                        Verified Specialist
+                      </span>
+                    </div>
+
+                    {/* Service Description */}
+                    <div className="mt-6 border-t pt-6">
+                      <h2 className="text-sm font-bold tracking-wide uppercase text-muted-foreground">
+                        Service Overview & Scope
+                      </h2>
+                      <p className="mt-3 text-base leading-7 text-muted-foreground whitespace-pre-line">
+                        {service.description ||
+                          "Full end-to-end service executed by trained local professionals using certified equipment."}
+                      </p>
+                    </div>
+
+                    {/* Included Highlights */}
+                    <div className="mt-6 rounded-2xl border border-border/70 bg-secondary/30 p-5">
+                      <h3 className="text-xs font-bold tracking-wider uppercase text-foreground">
+                        What&apos;s Included in This Service
+                      </h3>
+                      <div className="mt-3 grid gap-2.5 sm:grid-cols-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                          <span>Dedicated certified technician</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                          <span>Complete diagnostic & safety check</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                          <span>High-grade commercial tools</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                          <span>30-day workmanship assurance</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -292,35 +341,144 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {reviewsList.map((review) => (
-                        <div
-                          key={review.id}
-                          className="rounded-2xl border bg-secondary/20 p-5 text-sm space-y-3 transition hover:border-primary/30"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                              <div className="grid size-8 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                                U
+                      {reviewsList.map((review) => {
+                        const isAuthor = Boolean(user && user.id === review.user_id);
+                        const isEditing = editingReviewId === review.id;
+                        const formattedDate = review.created_at
+                          ? new Date(review.created_at).toLocaleDateString("en-IN", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })
+                          : null;
+
+                        return (
+                          <div
+                            key={review.id}
+                            className="rounded-2xl border bg-secondary/20 p-5 text-sm space-y-3 transition hover:border-primary/30"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2.5">
+                                <div className="grid size-8 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                                  U
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-foreground text-xs">
+                                      {isAuthor ? "You" : "Verified Customer"}
+                                    </span>
+                                    {isAuthor && (
+                                      <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                                        Your Review
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                    <span>Completed Booking</span>
+                                    {formattedDate && (
+                                      <>
+                                        <span>•</span>
+                                        <span>{formattedDate}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                              <div>
-                                <span className="font-bold text-foreground text-xs">Verified Customer</span>
-                                <p className="text-[10px] text-muted-foreground">Completed Booking</p>
+
+                              <div className="flex items-center gap-3">
+                                {!isEditing && (
+                                  <div className="flex items-center gap-1 text-amber-500 font-bold text-xs">
+                                    <Star className="size-3.5 fill-amber-400" />
+                                    <span>{review.rating}.0</span>
+                                  </div>
+                                )}
+
+                                {isAuthor && !isEditing && (
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingReviewId(review.id);
+                                        setEditRating(review.rating);
+                                        setEditComment(review.comment || "");
+                                      }}
+                                      className="p-1 text-muted-foreground hover:text-foreground transition rounded hover:bg-muted"
+                                      title="Edit Review"
+                                    >
+                                      <Edit2 className="size-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteReview(review.id)}
+                                      className="p-1 text-muted-foreground hover:text-destructive transition rounded hover:bg-destructive/10"
+                                      title="Delete Review"
+                                    >
+                                      <Trash2 className="size-3.5" />
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-1 text-amber-500 font-bold text-xs">
-                              <Star className="size-3.5 fill-amber-400" />
-                              <span>{review.rating}.0</span>
-                            </div>
+                            {isEditing ? (
+                              <div className="pt-2 space-y-3 border-t">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-medium">Rating:</span>
+                                  <div className="flex items-center gap-1">
+                                    {[1, 2, 3, 4, 5].map((s) => (
+                                      <button
+                                        key={s}
+                                        type="button"
+                                        onClick={() => setEditRating(s)}
+                                        className="p-0.5"
+                                      >
+                                        <Star
+                                          className={cn(
+                                            "size-4",
+                                            s <= editRating ? "fill-amber-400 text-amber-400" : "text-muted-foreground"
+                                          )}
+                                        />
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <Input
+                                  value={editComment}
+                                  onChange={(e) => setEditComment(e.target.value)}
+                                  placeholder="Edit your comment..."
+                                  className="text-xs"
+                                />
+
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    disabled={updateReviewMutation.isPending}
+                                    onClick={() => handleSaveEditReview(review.id)}
+                                  >
+                                    {updateReviewMutation.isPending ? "Saving…" : "Save Changes"}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 text-xs"
+                                    onClick={() => setEditingReviewId(null)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              review.comment && (
+                                <p className="text-xs leading-relaxed text-muted-foreground italic">
+                                  “{review.comment}”
+                                </p>
+                              )
+                            )}
                           </div>
-
-                          {review.comment && (
-                            <p className="text-xs leading-relaxed text-muted-foreground italic">
-                              “{review.comment}”
-                            </p>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

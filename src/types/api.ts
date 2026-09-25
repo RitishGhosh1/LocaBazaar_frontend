@@ -459,13 +459,36 @@ export interface components {
             /** Next Cursor */
             next_cursor?: number | null;
         };
+        /** BookingCustomerRead */
+        BookingCustomerRead: {
+            id: number;
+            name: string;
+            email: string;
+            phone?: string | null;
+            avatar_url?: string | null;
+        };
+        /** BookingServiceRead */
+        BookingServiceRead: {
+            id: number;
+            name: string;
+            price: number;
+            image_url?: string | null;
+        };
         /** BookingRead */
         BookingRead: {
             /** Service Id */
             service_id: number;
             /** Id */
             id: number;
+            user_id?: number;
             status: components["schemas"]["BookingStatus"];
+            booking_time?: string | null;
+            update_time?: string | null;
+            provider_note?: string | null;
+            user?: components["schemas"]["BookingCustomerRead"] | null;
+            customer?: components["schemas"]["BookingCustomerRead"] | null;
+            services?: components["schemas"]["BookingServiceRead"] | null;
+            service?: components["schemas"]["BookingServiceRead"] | null;
         };
         /**
          * BookingStatus
@@ -549,6 +572,15 @@ export interface components {
             id: number;
             /** User Id */
             user_id: number;
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /** ReviewUpdate */
+        ReviewUpdate: {
+            rating?: number | null;
+            comment?: string | null;
         };
         /** ServiceCreate */
         ServiceCreate: {
@@ -560,6 +592,8 @@ export interface components {
             description?: string | null;
             /** Price */
             price: number;
+            /** Image Url */
+            image_url?: string | null;
             /** Latitude */
             latitude?: number | null;
             /** Longitude */
@@ -584,6 +618,8 @@ export interface components {
             description?: string | null;
             /** Price */
             price: number;
+            /** Image Url */
+            image_url?: string | null;
             /** Latitude */
             latitude?: number | null;
             /** Longitude */
@@ -610,6 +646,8 @@ export interface components {
             description?: string | null;
             /** Price */
             price: number;
+            /** Image Url */
+            image_url?: string | null;
             /** Latitude */
             latitude?: number | null;
             /** Longitude */
@@ -634,6 +672,8 @@ export interface components {
             phone?: string | null;
             /** Bio */
             bio?: string | null;
+            /** Avatar Url */
+            avatar_url?: string | null;
             /**
              * Password
              * @description Plain text password
@@ -653,11 +693,15 @@ export interface components {
             phone?: string | null;
             /** Bio */
             bio?: string | null;
+            /** Avatar Url */
+            avatar_url?: string | null;
             /** Id */
             id: number;
             role: components["schemas"]["UserRole"];
             /** Is Active */
             is_active: boolean;
+            /** Is Verified */
+            is_verified: boolean;
         };
         /**
          * UserRole

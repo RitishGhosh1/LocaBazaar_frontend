@@ -21,3 +21,21 @@ export async function deleteCustomerAccount(): Promise<void> {
   await api.delete("/customers/me");
 }
 
+export interface UpdateCustomerProfilePayload {
+  name?: string;
+  phone?: string | null;
+  bio?: string | null;
+  avatar_url?: string | null;
+}
+
+export async function getCustomerProfile(): Promise<CustomerRead> {
+  const { data } = await api.get<CustomerRead>("/customers/me");
+  return data;
+}
+
+export async function updateCustomerProfile(payload: UpdateCustomerProfilePayload): Promise<CustomerRead> {
+  const { data } = await api.patch<CustomerRead>("/customers/me", payload);
+  return data;
+}
+
+
