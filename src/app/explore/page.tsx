@@ -7,7 +7,6 @@ import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react
 import { ServiceCard } from "@/components/common/service-card";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useProviders } from "@/hooks/use-providers";
 import { useReviewsForService } from "@/hooks/use-reviews";
@@ -79,7 +78,7 @@ function ServiceCardWithReviews({
       rating={rating}
       reviewCount={reviewCount > 0 ? reviewCount : undefined}
       location={locationString}
-      imageUrl={service.image_url}
+      imageUrl={service.images?.[0]?.url ?? service.image_url}
     />
   );
 }

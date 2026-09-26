@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Check, Image as ImageIcon, LocateFixed, MapPin, Upload, X } from "lucide-react";
+import { ArrowLeft, Check, Image as ImageIcon, LocateFixed, MapPin, Trash2, Upload, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -24,7 +24,9 @@ import {
   POPULAR_LOCATIONS,
   searchLocations,
 } from "@/lib/geocoding";
-import { uploadImage, getFullImageUrl } from "@/services/uploads";
+import { deleteUnattachedUpload, uploadImage, getFullImageUrl, type UploadResponse } from "@/services/uploads";
+
+const MAX_SERVICE_IMAGES = 10;
 
 const serviceSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -43,7 +45,7 @@ export default function NewProviderServicePage() {
   const categoriesQuery = useCategories();
   const createMutation = useCreateService();
 
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [images, setImages] = useState<UploadResponse[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -133,17 +135,42 @@ export default function NewProviderServicePage() {
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+
+    const availableSlots = MAX_SERVICE_IMAGES - images.length;
+    if (availableSlots <= 0) {
+      toast.error(`You can add up to ${MAX_SERVICE_IMAGES} photos.`);
+      return;
+    }
+    const filesToUpload = files.slice(0, availableSlots);
+    if (filesToUpload.length < files.length) {
+      toast.info(`Only the first ${availableSlots} selected photo(s) will be added.`);
+    }
+
     setIsUploading(true);
+    const uploaded: UploadResponse[] = [];
+    const failures: string[] = [];
+    for (const file of filesToUpload) {
+      try {
+        uploaded.push(await uploadImage(file, "service"));
+      } catch (error) {
+        failures.push(getApiErrorMessage(error, `Failed to upload ${file.name}`));
+      }
+    }
+    setImages((current) => [...current, ...uploaded]);
+    if (uploaded.length > 0) toast.success(`${uploaded.length} service photo(s) uploaded.`);
+    if (failures.length > 0) toast.error(failures[0]);
+    setIsUploading(false);
+  }
+
+  async function handleRemoveImage(image: UploadResponse) {
     try {
-      const res = await uploadImage(file);
-      setImageUrl(res.url);
-      toast.success("Service photo uploaded successfully!");
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, "Failed to upload image"));
-    } finally {
-      setIsUploading(false);
+      await deleteUnattachedUpload(image.id);
+      setImages((current) => current.filter((item) => item.id !== image.id));
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to remove image"));
     }
   }
 
@@ -156,7 +183,7 @@ export default function NewProviderServicePage() {
         price: values.price,
         latitude: values.latitude ?? null,
         longitude: values.longitude ?? null,
-        image_url: imageUrl || null,
+        image_ids: images.map((image) => image.id),
       });
       toast.success("Service created successfully");
       router.push("/provider/services");
@@ -226,61 +253,57 @@ export default function NewProviderServicePage() {
             <Textarea id="description" rows={4} {...form.register("description")} />
           </div>
 
-          {/* Service Image / Cover Photo Upload */}
+          {/* Service Photo Gallery Upload */}
           <div className="space-y-2">
-            <Label>Service Cover Image (optional)</Label>
+            <Label htmlFor="service-images">Service photos (optional)</Label>
             <input
+              id="service-images"
               type="file"
               ref={fileInputRef}
               onChange={handleFileChange}
               accept="image/jpeg,image/png,image/webp,image/gif"
+              multiple
               className="hidden"
             />
-            {imageUrl ? (
-              <div className="relative overflow-hidden rounded-xl border bg-muted aspect-[21/9] max-h-48 group">
-                <img
-                  src={getFullImageUrl(imageUrl)!}
-                  alt="Service preview"
-                  className="size-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <Button
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {images.map((image, index) => (
+                <div key={image.id} className="group relative aspect-[4/3] overflow-hidden rounded-lg border bg-muted">
+                  <img
+                    src={getFullImageUrl(image.url) ?? undefined}
+                    alt={`Service photo preview ${index + 1}`}
+                    className="size-full object-cover"
+                  />
+                  <button
                     type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
+                    onClick={() => void handleRemoveImage(image)}
+                    aria-label={`Remove photo ${index + 1}`}
+                    disabled={isUploading || createMutation.isPending}
+                    className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-black/65 text-white opacity-100 transition hover:bg-destructive sm:opacity-0 sm:group-hover:opacity-100"
                   >
-                    Change Image
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => setImageUrl(null)}
-                  >
-                    Remove
-                  </Button>
+                    <Trash2 className="size-4" aria-hidden="true" />
+                  </button>
                 </div>
-              </div>
-            ) : (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="flex flex-col items-center justify-center rounded-xl border border-dashed p-6 text-center hover:bg-muted/40 transition cursor-pointer"
-              >
-                <div className="grid size-10 place-items-center rounded-full bg-primary/10 text-primary mb-2">
-                  <Upload className="size-5" />
-                </div>
-                <p className="text-xs font-semibold text-foreground">
-                  {isUploading ? "Uploading image…" : "Click to upload service photo"}
-                </p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  JPEG, PNG, WEBP or GIF (Max 5MB)
-                </p>
-              </div>
-            )}
+              ))}
+              {images.length < MAX_SERVICE_IMAGES && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading || createMutation.isPending}
+                  className="flex min-h-32 flex-col items-center justify-center rounded-lg border border-dashed p-4 text-center transition hover:bg-muted/40 disabled:cursor-wait disabled:opacity-60"
+                >
+                  <span className="mb-2 grid size-10 place-items-center rounded-full bg-primary/10 text-primary">
+                    {isUploading ? <ImageIcon className="size-5 animate-pulse" /> : <Upload className="size-5" />}
+                  </span>
+                  <span className="text-xs font-semibold text-foreground">
+                    {isUploading ? "Uploading photos…" : "Add photos"}
+                  </span>
+                  <span className="mt-1 text-[11px] text-muted-foreground">
+                    JPEG, PNG, WEBP or GIF · max 5MB each
+                  </span>
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">Add up to {MAX_SERVICE_IMAGES} photos. The first photo is used as the cover.</p>
           </div>
 
           <div className="space-y-2">
@@ -405,7 +428,7 @@ export default function NewProviderServicePage() {
             )}
           </div>
 
-          <Button type="submit" disabled={createMutation.isPending || categoriesQuery.isLoading}>
+          <Button type="submit" disabled={createMutation.isPending || categoriesQuery.isLoading || isUploading}>
             {createMutation.isPending ? "Creating…" : "Create service"}
           </Button>
         </form>

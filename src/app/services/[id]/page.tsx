@@ -8,16 +8,12 @@ import {
   CheckCircle2,
   Clock,
   Edit2,
-  MapPin,
   Phone,
   ShieldAlert,
   ShieldCheck,
-  Sparkles,
   Star,
   Tag,
   Trash2,
-  User,
-  Wrench,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -25,6 +21,7 @@ import { toast } from "sonner";
 
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
+import { ServiceImageCarousel } from "@/components/common/service-image-carousel";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,7 +33,6 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { formatPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
-import { getFullImageUrl } from "@/services/uploads";
 
 interface ServiceDetailPageProps {
   params: Promise<{ id: string }>;
@@ -63,12 +59,9 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
   const service = serviceQuery.data;
   const categories = categoriesQuery.data ?? [];
   const providers = providersQuery.data ?? [];
-
   const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
   const provider = providers.find((p) => p.id === service?.owner_id);
-
   const categoryName = service ? categoryMap.get(service.category_id) ?? "Home Service" : "";
-  const providerName = provider?.name ?? (service ? "Verified Provider" : "");
 
   const reviewsList = reviewsQuery.data?.items ?? service?.reviews ?? [];
   const averageRating =
@@ -183,15 +176,11 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                 {/* Header Banner Card */}
                 <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
                   {/* Service Image Banner if available */}
-                  {service.image_url && (
-                    <div className="aspect-[21/9] w-full overflow-hidden border-b bg-muted">
-                      <img
-                        src={getFullImageUrl(service.image_url)!}
-                        alt={service.name}
-                        className="size-full object-cover"
-                      />
-                    </div>
-                  )}
+                  <ServiceImageCarousel
+                    images={service.images}
+                    fallbackImageUrl={service.image_url}
+                    serviceName={service.name}
+                  />
 
                   <div className="p-6 sm:p-8">
                     <div className="flex flex-wrap items-center justify-between gap-3">

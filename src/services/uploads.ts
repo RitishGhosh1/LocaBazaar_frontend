@@ -4,13 +4,18 @@ const rawApiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").r
 export const BACKEND_SERVER_URL = rawApiUrl.replace(/\/api\/v1$/, "");
 
 export interface UploadResponse {
+  id: number;
   url: string;
   filename: string;
 }
 
-export async function uploadImage(file: File): Promise<UploadResponse> {
+export async function uploadImage(
+  file: File,
+  purpose: "avatar" | "service" = "avatar",
+): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("purpose", purpose);
 
   const { data } = await api.post<UploadResponse>("/uploads/image", formData, {
     headers: {
@@ -19,6 +24,10 @@ export async function uploadImage(file: File): Promise<UploadResponse> {
   });
 
   return data;
+}
+
+export async function deleteUnattachedUpload(uploadId: number): Promise<void> {
+  await api.delete(`/uploads/${uploadId}`);
 }
 
 export function getFullImageUrl(url?: string | null): string | null {

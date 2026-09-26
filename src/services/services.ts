@@ -6,10 +6,19 @@ import { useAuthStore } from "@/store/auth-store";
 export type ServiceListParams = NonNullable<
   operations["get_available_services_api_v1_services__get"]["parameters"]["query"]
 >;
-export type ServiceListResponse = components["schemas"]["ServiceListResponse"];
-export type ServiceDetails = components["schemas"]["ServiceRead"];
-export type ServiceShort = components["schemas"]["ServiceShortRead"];
-export type ServiceCreate = components["schemas"]["ServiceCreate"];
+export type ServiceImage = { id: number; url: string; filename: string };
+export type ServiceDetails = Omit<components["schemas"]["ServiceRead"], "images"> & {
+  images: ServiceImage[];
+};
+export type ServiceShort = Omit<components["schemas"]["ServiceShortRead"], "images"> & {
+  images: ServiceImage[];
+};
+export type ServiceListResponse = Omit<components["schemas"]["ServiceListResponse"], "items"> & {
+  items: ServiceShort[];
+};
+export type ServiceCreate = Omit<components["schemas"]["ServiceCreate"], "image_ids"> & {
+  image_ids?: number[];
+};
 export type ServiceCategory = components["schemas"]["CategoryRead"];
 
 export async function getServices(params: ServiceListParams = {}): Promise<ServiceListResponse> {
