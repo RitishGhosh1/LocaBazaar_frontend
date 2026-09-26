@@ -1,7 +1,4 @@
-import api from "@/services/api";
-
-const rawApiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
-export const BACKEND_SERVER_URL = rawApiUrl.replace(/\/api\/v1$/, "");
+import api, { BACKEND_SERVER_URL } from "@/services/api";
 
 export interface UploadResponse {
   id: number;

@@ -6,8 +6,27 @@ import axios, {
 } from "axios";
 
 export const ACCESS_TOKEN_STORAGE_KEY = "access_token";
-const rawApiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
-export const API_BASE_URL = rawApiUrl.endsWith("/api/v1") ? rawApiUrl : `${rawApiUrl}/api/v1`;
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+const pointsToLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(
+  configuredApiUrl || "",
+);
+const isProduction = process.env.NODE_ENV === "production";
+const rawApiUrl = (
+  isProduction && pointsToLocalhost
+    ? ""
+    : configuredApiUrl || (isProduction ? "" : "http://localhost:8000")
+).replace(/\/+$/, "");
+
+if (isProduction && !rawApiUrl) {
+  console.error("Set NEXT_PUBLIC_API_URL to the deployed backend URL in Vercel before building.");
+}
+
+export const API_BASE_URL = rawApiUrl
+  ? rawApiUrl.endsWith("/api/v1")
+    ? rawApiUrl
+    : `${rawApiUrl}/api/v1`
+  : "";
+export const BACKEND_SERVER_URL = rawApiUrl.replace(/\/api\/v1$/, "");
 
 export interface ApiErrorResponse {
   detail?: string | { msg?: string; type?: string }[];
