@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LocaBazaar Frontend
 
-## Getting Started
+LocaBazaar is a local-services marketplace where customers discover and book nearby providers. This repository contains the responsive Next.js web application.
 
-First, run the development server:
+**Live application:** [loca-bazaar-frontend.vercel.app](https://loca-bazaar-frontend.vercel.app/)
+
+**Backend API:** [Swagger documentation](https://locabazaar-ritish.duckdns.org/docs) · [API base URL](https://locabazaar-ritish.duckdns.org/api/v1)
+
+## What it includes
+
+- Browse and search local services by category and location.
+- Customer registration, sign-in, profile management, and bookings.
+- Provider onboarding, service listings, image uploads, and booking management.
+- Service ratings and reviews.
+- Administrator dashboards for platform moderation.
+- Responsive light and dark themes.
+
+## Built with
+
+Next.js App Router, React, TypeScript, Tailwind CSS, TanStack Query, Zustand, and Axios.
+
+## Run locally
+
+Requirements: Node.js 20.9 or later and npm.
+
+```bash
+git clone https://github.com/RitishGhosh1/LocaBazaar_frontend.git
+cd LocaBazaar_frontend
+npm install
+```
+
+Create `.env.local` with the local backend URL:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+```
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open <http://localhost:3000>. The backend must also be running; see the [backend repository](https://github.com/RitishGhosh1/LocaBazaar) for Docker Compose setup.
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Connect this repository to Vercel and add this project environment variable for the environments you deploy:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Name | Value |
+| --- | --- |
+| `NEXT_PUBLIC_API_URL` | `https://locabazaar-ritish.duckdns.org/api/v1` |
+
+This URL is included in browser code, so it is public configuration rather than a secret. Set the backend CORS allowlist to the exact Vercel origin. After changing the variable, create a new deployment so Next.js rebuilds with the updated value.
+
+## Build and lint
+
+```bash
+npm run build
+npm run lint
+```
+
+## Project layout
+
+```text
+src/
+├── app/         # Pages and layouts (explore, service, customer, provider, admin)
+├── components/  # Shared UI and feature components
+├── hooks/       # Query and application hooks
+├── services/    # API client and typed endpoint helpers
+└── store/       # Client-side state
+```
